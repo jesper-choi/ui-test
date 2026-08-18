@@ -1,14 +1,14 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 
 /* ------------------------------------------------------------------
-   AI SOC — Pipeline Hero (v21 · Triage Decision Engine Edition)
+   AI SOC — Pipeline Hero (v22 · Balanced Stage Visual Signatures)
 
-   · Distinct Stage Feedback:
-     - ENRICHMENT: Visible synaptic bus communication with SUBAGENTS.
-     - TRIAGE (판단중): Dedicated AI Decision-Making Engine:
-       * Dual-polarity decision halos (Green/Red probability balance).
-       * Soft evaluation probe rays testing the RESOLVED vs ESCALATED exit forks.
-       * Subtle internal decision-scanning sweep inside active Triage pods.
+   · Uniform Capsule Design:
+     - Removed "POD 1" / "POD 2" text from Subagents for 100% unified design.
+     - All 8 pods across the pipeline now share the identical minimalist capsule aesthetic.
+   · Symmetrical & Highly Visible Stage Processing:
+     - ENRICHMENT: Streams active packets downward to SUBAGENTS.
+     - TRIAGE: Streams vivid Decision Probes forward to RESOLVED (Green) & ESCALATED (Red) outputs.
      - ORCHESTRATOR: Master Admission Queue (4 per pod / 8 total).
 ------------------------------------------------------------------- */
 
@@ -18,7 +18,7 @@ const C = {
     surface: "rgba(18, 24, 38, 0.85)",
     glassBorder: "rgba(255, 255, 255, 0.08)",
     flow: "#38BDF8",
-    aiAura: "rgba(96, 165, 250, 0.22)",
+    aiAura: "rgba(96, 165, 250, 0.25)",
     ok: "#34C759",
     alert: "#FF453A",
     dim: "#86868B",
@@ -150,9 +150,10 @@ export default function PipelineHero() {
             if (s.tools > 0) {
                 const subHeaderY = spineY + 82;
                 const subPodY = spineY + 122;
+                // Pure clean subagent pods without "POD 1" text clutter
                 const subPods = [
-                    { id: "sub-p1", label: "POD 1", activeCount: 0, pos: { x: x - 46, y: subPodY }, w: SUB_POD_W, h: SUB_POD_H, beat: Math.random() * 1000 },
-                    { id: "sub-p2", label: "POD 2", activeCount: 0, pos: { x: x + 46, y: subPodY }, w: SUB_POD_W, h: SUB_POD_H, beat: Math.random() * 1000 },
+                    { id: "sub-p1", activeCount: 0, pos: { x: x - 46, y: subPodY }, w: SUB_POD_W, h: SUB_POD_H, beat: Math.random() * 1000 },
+                    { id: "sub-p2", activeCount: 0, pos: { x: x + 46, y: subPodY }, w: SUB_POD_W, h: SUB_POD_H, beat: Math.random() * 1000 },
                 ];
 
                 const workerY = subPodY + 76;
@@ -181,7 +182,7 @@ export default function PipelineHero() {
                 pods,
                 podChoiceIndex: 0,
                 sub,
-                probes: [], // Dedicated decision probes for Triage
+                probes: [], // Triage forward decision probes
             };
         });
 
@@ -291,7 +292,7 @@ export default function PipelineHero() {
             }
         }
 
-        // Subagents Synaptic Communication Engine (Enrichment)
+        // Subagents Synaptic Communication Engine (Enrichment Downward Flow)
         for (let i = 0; i < S.nodes.length; i++) {
             const n = S.nodes[i];
             if (!n.sub) continue;
@@ -330,17 +331,18 @@ export default function PipelineHero() {
             }
         }
 
-        // Dedicated TRIAGE Decision Engine (판단중 Evaluation Probes)
+        // TRIAGE High-Visibility Decision Stream (Forward Flow to Resolved & Escalated)
         const triageNode = S.nodes[2];
         if (triageNode) {
             const isTriaging = triageNode.pods[0].activeCount > 0 || triageNode.pods[1].activeCount > 0;
             if (isTriaging) {
-                if (triageNode.probes.length < 4 && Math.random() < 0.045) {
+                if (triageNode.probes.length < 6 && Math.random() < 0.075) {
+                    const route = Math.random() < 0.75 ? "resolved" : "escalated";
                     triageNode.probes.push({
                         lane: Math.random() < 0.5 ? 0 : 1,
-                        route: Math.random() < 0.85 ? "resolved" : "escalated", // Weighing resolution vs escalation
+                        route,
                         t: 0,
-                        speed: 0.0011 + Math.random() * 0.0003,
+                        speed: 0.0012 + Math.random() * 0.0003,
                     });
                 }
             }
@@ -428,31 +430,33 @@ export default function PipelineHero() {
             }
         }
 
-        /* ---------- Exit Curves & TRIAGE Decision Evaluation Probes ---------- */
+        /* ---------- Exit Curves & TRIAGE Decision Stream ---------- */
         const lastMerge = nodes[nodes.length - 1].merge;
         const triageNode = nodes[2];
         const isTriaging = triageNode && (triageNode.pods[0].activeCount > 0 || triageNode.pods[1].activeCount > 0);
 
         // Main Spine to Split Junction
-        g.strokeStyle = isTriaging ? `rgba(96, 165, 250, ${0.45 * k})` : `rgba(56, 189, 248, ${0.18 * k})`;
+        g.strokeStyle = isTriaging ? `rgba(96, 165, 250, ${0.5 * k})` : `rgba(56, 189, 248, ${0.18 * k})`;
+        g.lineWidth = isTriaging ? 1.4 : 1.2;
         g.beginPath();
         g.moveTo(lastMerge, spineY);
         g.lineTo(splitX, spineY);
         g.stroke();
 
-        // Exit Fork Curves
-        const mkExit = (dir, col, glow) => {
-            g.strokeStyle = glow && isTriaging ? col.replace(/[\d\.]+\)$/, "0.75)") : col;
-            g.lineWidth = glow && isTriaging ? 1.4 : 1.2;
+        // Exit Fork Curves with active decision energy glow
+        const mkExit = (dir, col, isActiveRoute) => {
+            const glowOpacity = isTriaging && isActiveRoute ? 0.8 : 0.45;
+            g.strokeStyle = col.replace(/[\d\.]+\)$/, `${glowOpacity * k})`);
+            g.lineWidth = isTriaging && isActiveRoute ? 1.5 : 1.2;
             g.beginPath();
             g.moveTo(splitX, spineY);
             g.bezierCurveTo(splitX + (outX - splitX) * 0.5, spineY, outX - 26, spineY + dir * FORK_DY, outX, spineY + dir * FORK_DY);
             g.stroke();
         };
-        mkExit(-1, `rgba(52, 199, 89, ${0.5 * k})`, true);
-        mkExit(1, `rgba(255, 69, 58, ${0.5 * k})`, true);
+        mkExit(-1, "rgba(52, 199, 89, 0.45)", true);
+        mkExit(1, "rgba(255, 69, 58, 0.45)", true);
 
-        // Render TRIAGE Decision Probes (판단 펄스: Triage ➔ Split Junction ➔ Resolved/Escalated Fork)
+        // Highly-Visible TRIAGE Forward Decision Probes (Green/Red Decision Stream)
         if (triageNode && triageNode.probes) {
             for (let pIdx = 0; pIdx < triageNode.probes.length; pIdx++) {
                 const prb = triageNode.probes[pIdx];
@@ -461,14 +465,14 @@ export default function PipelineHero() {
                 const dir = isResolved ? -1 : 1;
 
                 let px, py;
-                if (prb.t < 0.4) {
-                    // 1. Pod to Merge to SplitX
-                    const u = prb.t / 0.4;
+                if (prb.t < 0.35) {
+                    // 1. Travel from Triage Pod Exit to Split Junction
+                    const u = prb.t / 0.35;
                     px = lerp(pod.right, splitX, u);
-                    py = u < 0.4 ? lerp(pod.pos.y, spineY, smoothstep(u / 0.4)) : spineY;
+                    py = u < 0.35 ? lerp(pod.pos.y, spineY, smoothstep(u / 0.35)) : spineY;
                 } else {
-                    // 2. SplitX branching into upper (Resolved) or lower (Escalated)
-                    const u = (prb.t - 0.4) / 0.6;
+                    // 2. Travel along Upper (Resolved) or Lower (Escalated) Exit Curve
+                    const u = (prb.t - 0.35) / 0.65;
                     const pt = evalCubic(
                         splitX, spineY,
                         splitX + (outX - splitX) * 0.5, spineY,
@@ -480,16 +484,17 @@ export default function PipelineHero() {
                     py = pt.y;
                 }
 
-                // Delicate decision probe photon
-                g.fillStyle = isResolved ? "rgba(52, 199, 89, 0.9)" : "rgba(255, 69, 58, 0.9)";
+                // Vivid, Punchy Decision Photon
+                const rgb = isResolved ? "52, 199, 89" : "255, 69, 58";
+                g.fillStyle = `rgba(${rgb}, 0.98)`;
                 g.beginPath();
-                g.arc(px, py, 1.8, 0, Math.PI * 2);
+                g.arc(px, py, 2.5, 0, Math.PI * 2);
                 g.fill();
 
-                // Faint trailing probe aura
-                g.fillStyle = isResolved ? "rgba(52, 199, 89, 0.25)" : "rgba(255, 69, 58, 0.25)";
+                // Luminous Decision Aura
+                g.fillStyle = `rgba(${rgb}, 0.35)`;
                 g.beginPath();
-                g.arc(px, py, 4.5, 0, Math.PI * 2);
+                g.arc(px, py, 5.5, 0, Math.PI * 2);
                 g.fill();
             }
         }
@@ -537,7 +542,7 @@ export default function PipelineHero() {
                 }
             }
 
-            // 3. Subagent Pods (Clean Apple Breathing Motion)
+            // 3. Subagent Pods (Clean Minimalist Capsule without "POD" text)
             for (let j = 0; j < 2; j++) {
                 const spod = sub.pods[j];
                 const px = spod.pos.x, py = spod.pos.y;
@@ -552,7 +557,7 @@ export default function PipelineHero() {
                 rr(g, px - spod.w * 0.5, py - spod.h * 0.5, spod.w, spod.h, SUB_POD_R);
                 g.stroke();
 
-                const ix = px - spod.w * 0.5 + 8.5;
+                const ix = px - spod.w * 0.5 + 9;
                 if (isBusy) {
                     const breath = 0.5 + 0.5 * Math.sin(now * 0.0035 + j);
                     g.fillStyle = `rgba(96, 165, 250, ${0.15 + breath * 0.25})`;
@@ -572,10 +577,11 @@ export default function PipelineHero() {
                     g.fill();
                 }
 
+                // Uniform Minimalist Counter (Consistent with all other pods)
+                g.font = `600 8.5px ${MONO}`;
                 g.textAlign = "right";
-                g.font = `600 8px ${MONO}`;
-                g.fillStyle = isBusy ? `rgba(245, 245, 247, ${0.95 * k})` : `rgba(161, 161, 166, ${0.65 * k})`;
-                g.fillText(spod.label, px + spod.w * 0.5 - 7, py + 2.8);
+                g.fillStyle = isBusy ? `rgba(245, 245, 247, ${0.95 * k})` : `rgba(161, 161, 166, ${0.6 * k})`;
+                g.fillText(`${spod.activeCount}`, px + spod.w * 0.5 - 7, py + 3.0);
             }
 
             // 4. Subagent Worker Chips
@@ -646,32 +652,32 @@ export default function PipelineHero() {
                 g.stroke();
             }
 
-            // Stage-Specific Dwelling Feedback
+            // Stage Dwelling Visuals
             if (pos.inAIStage) {
                 if (pos.stageKey === "triage" && pos.isDwellingInPod) {
-                    // TRIAGE: Subtle dual decision polarity shimmer (Green & Red probability balance)
-                    const polT = (now * 0.003) % (Math.PI * 2);
-                    const polY = Math.sin(polT) * 4;
+                    // TRIAGE: Vivid Dual-Tone Decision Beacon (Green/Red Evaluation Ring)
+                    const polT = (now * 0.004) % (Math.PI * 2);
+                    const sinG = Math.sin(polT);
 
-                    // Top Decision Ray (Resolved)
-                    g.fillStyle = "rgba(52, 199, 89, 0.35)";
+                    // Upper Green Decision Beacon
+                    g.fillStyle = `rgba(52, 199, 89, ${0.4 + sinG * 0.2})`;
                     g.beginPath();
-                    g.arc(pos.x + 3, pos.y - 4 + polY * 0.4, 3, 0, Math.PI * 2);
+                    g.arc(pos.x + 4, pos.y - 4, 3.5, 0, Math.PI * 2);
                     g.fill();
 
-                    // Bottom Decision Ray (Escalated)
-                    g.fillStyle = "rgba(255, 69, 58, 0.35)";
+                    // Lower Red Decision Beacon
+                    g.fillStyle = `rgba(255, 69, 58, ${0.4 - sinG * 0.2})`;
                     g.beginPath();
-                    g.arc(pos.x + 3, pos.y + 4 - polY * 0.4, 3, 0, Math.PI * 2);
+                    g.arc(pos.x + 4, pos.y + 4, 3.5, 0, Math.PI * 2);
                     g.fill();
 
-                    // Center Decision Core
-                    g.fillStyle = "rgba(96, 165, 250, 0.25)";
+                    // Central Decision Core Halo
+                    g.fillStyle = "rgba(96, 165, 250, 0.35)";
                     g.beginPath();
-                    g.arc(pos.x, pos.y, 9.5, 0, Math.PI * 2);
+                    g.arc(pos.x, pos.y, 10, 0, Math.PI * 2);
                     g.fill();
                 } else {
-                    // ENRICHMENT: Serene, Soft AI Analysis Halo
+                    // ENRICHMENT: Soft AI Analysis Halo
                     g.fillStyle = "rgba(96, 165, 250, 0.22)";
                     g.beginPath();
                     g.arc(pos.x, pos.y, 9, 0, Math.PI * 2);
@@ -716,7 +722,7 @@ export default function PipelineHero() {
                 rr(g, px - POD_W * 0.5, py - POD_H * 0.5, POD_W, POD_H, POD_R);
                 g.fill();
 
-                // Pod Hairline Border (Triage has a slight decision tint)
+                // Pod Hairline Border
                 g.lineWidth = 1;
                 g.strokeStyle = isAnalyzing
                     ? (isTriage ? "rgba(147, 197, 253, 0.65)" : "rgba(96, 165, 250, 0.55)")
@@ -730,20 +736,15 @@ export default function PipelineHero() {
                     const breath = 0.5 + 0.5 * Math.sin(now * 0.0035 + j);
 
                     if (isTriage) {
-                        // TRIAGE: Decision Polarity Core (Subtle dual-tone aura)
-                        g.fillStyle = `rgba(52, 199, 89, ${0.14 + breath * 0.16})`;
+                        // TRIAGE: Active Decision Dual-Beacon (Green/Red split jewel)
+                        g.fillStyle = `rgba(52, 199, 89, ${0.45 + breath * 0.35})`;
                         g.beginPath();
-                        g.arc(ix, py - 1.5, 4.2, 0, Math.PI * 2);
+                        g.arc(ix - 1.5, py, 2.2, 0, Math.PI * 2);
                         g.fill();
 
-                        g.fillStyle = `rgba(255, 69, 58, ${0.14 + breath * 0.16})`;
+                        g.fillStyle = `rgba(255, 69, 58, ${0.45 + breath * 0.35})`;
                         g.beginPath();
-                        g.arc(ix, py + 1.5, 4.2, 0, Math.PI * 2);
-                        g.fill();
-
-                        g.fillStyle = "#93C5FD";
-                        g.beginPath();
-                        g.arc(ix, py, 2.4, 0, Math.PI * 2);
+                        g.arc(ix + 1.5, py, 2.2, 0, Math.PI * 2);
                         g.fill();
                     } else {
                         // ENRICHMENT: Pure Cyan Breathing Halo
