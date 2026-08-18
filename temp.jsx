@@ -32,8 +32,7 @@ const SANS =
 const STAGES = [
     { key: "orchestrator", label: "ORCHESTRATOR", cap: 4, service: 450, tools: 0 },
     { key: "enrichment", label: "ENRICHMENT", cap: 3, service: 1400, tools: 6 },
-    { key: "triage", label: "TRIAGE", cap: 4, service: 800, tools: 4 },
-    { key: "action", label: "ACTION", cap: 2, service: 550, tools: 0 },
+    { key: "triage", label: "TRIAGE", cap: 4, service: 800, tools: 0 },
 ];
 
 const NODE_R = 18;
@@ -813,7 +812,7 @@ export default function PipelineHero() {
 
                 <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
                     {[
-                        ["SYSTEM STATUS", "Healthy", "4/4 agents · 2/2 subagents", C.ok],
+                        ["SYSTEM STATUS", "Healthy", "3/3 agents · 1/1 subagent", C.ok],
                         ["QUEUE WORKER", "Running", "0 done · 0 failed · 2 pods", C.ok],
                         [
                             "AI ANALYSIS PIPELINE",

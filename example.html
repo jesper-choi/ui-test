@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI SOC · 노드 이중화 표현 5종</title>
+<style>
+:root{
+  --void:#0A0E14; --surface:#131A24; --line:#232E3B;
+  --flow:#38BDF8; --ok:#22C55E; --alert:#F43F5E; --warn:#F59E0B;
+  --dim:#7C8CA1; --text:#E2E8F0;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--void);color:var(--text);font-family:var(--sans)}
+body{padding:24px 20px 32px}
+.wrap{max-width:1180px;margin:0 auto}
+
+.eyebrow{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.24em;color:var(--dim)}
+h1{margin:6px 0 0;font-size:20px;font-weight:650;letter-spacing:-.01em}
+.lede{margin:8px 0 0;font-size:12.5px;line-height:1.7;color:rgba(160,175,192,.85)}
+
+.tabs{display:flex;flex-wrap:wrap;gap:2px;margin:18px 0 0;padding:2px;
+  border:1px solid var(--line);border-radius:9px;background:rgba(19,26,36,.7);width:max-content;max-width:100%}
+.tabs button{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.1em;
+  padding:7px 13px;border:0;border-radius:6px;background:transparent;color:var(--dim);cursor:pointer;
+  transition:background .14s,color .14s;line-height:1}
+.tabs button[aria-selected="true"]{background:rgba(56,189,248,.16);color:var(--flow)}
+.tabs button:focus-visible{outline:2px solid var(--flow);outline-offset:2px}
+
+.band{margin-top:12px;border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative;background:var(--void)}
+.scroll{overflow-x:auto}
+canvas{display:block;width:100%;height:260px;min-width:820px}
+.overlay{position:absolute;left:20px;top:18px;pointer-events:none}
+.ov-k{font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.14em;color:var(--dim)}
+.ov-v{margin-top:5px;font-size:16px;font-weight:650;letter-spacing:-.01em}
+.ov-s{margin-top:8px;font-family:var(--mono);font-size:9px;font-weight:600;letter-spacing:.08em;color:var(--dim)}
+.hint{position:absolute;left:20px;bottom:14px;font-family:var(--mono);font-size:9px;
+  letter-spacing:.08em;color:rgba(124,140,161,.6);pointer-events:none}
+
+.note{margin-top:14px;display:grid;gap:4px}
+.note .t{font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.12em;color:var(--flow)}
+.note .d{font-size:12.5px;line-height:1.7;color:rgba(160,175,192,.88)}
+.note .m{font-family:var(--mono);font-size:10.5px;color:rgba(124,140,161,.8);letter-spacing:.04em}
+@media(max-width:640px){body{padding:18px 12px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">AI SOC · NODE TREATMENTS</div>
+  <h1>스테이지 하나 = 파드 둘, 다섯 가지 표현</h1>
+  <p class="lede">파이프라인 시뮬레이션은 전부 동일합니다. 노드를 그리는 방식만 바뀝니다 — 같은 조건에서 비교해보세요.</p>
+
+  <div class="tabs" id="tabs" role="tablist"></div>
+
+  <div class="band">
+    <div class="scroll"><canvas id="cv" aria-label="파드 2개로 이중화된 파이프라인"></canvas></div>
+    <div class="overlay">
+      <div class="ov-k">AI SOC</div>
+      <div class="ov-v">Operation Overview</div>
+      <div class="ov-s" id="status"></div>
+    </div>
+    <div class="hint">파드를 클릭하면 중단·복구됩니다</div>
+  </div>
+
+  <div class="note">
+    <div class="t" id="nt"></div>
+    <div class="d" id="nd"></div>
+    <div class="m" id="nm"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+"use strict";
+const cv = document.getElementById("cv");
+const g = cv.getContext("2d");
+const MONO = 'ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace';
+const C = { void:"#0A0E14", flow:"#38BDF8", ok:"#22C55E", alert:"#F43F5E",
+            warn:"#F59E0B", dim:"#7C8CA1", text:"#E2E8F0", line:"#232E3B" };
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const STAGES = [
+  { label:"ORCHESTRATOR", cap:4, service:520 },
+  { label:"ENRICHMENT",   cap:3, service:1500 },
+  { label:"TRIAGE",       cap:4, service:820 },
+];
+const PODS = 2, HALF = 52, FORK_DY = 44, Q_GAP = 7, Q_MAX = 12;
+
+/* ── helpers ── */
+const ease = t => t<.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2;
+const lerp = (a,b,t) => a+(b-a)*t;
+const cl = t => t<0?0:t>1?1:t;
+const cub = (t,a,b,c,d) => { const u=1-t; return u*u*u*a+3*u*u*t*b+3*u*t*t*c+t*t*t*d; };
+const rr = (x,y,w,h,r) => { const q=Math.min(r,w/2,h/2);
+  g.beginPath(); g.moveTo(x+q,y); g.lineTo(x+w-q,y); g.quadraticCurveTo(x+w,y,x+w,y+q);
+  g.lineTo(x+w,y+h-q); g.quadraticCurveTo(x+w,y+h,x+w-q,y+h); g.lineTo(x+q,y+h);
+  g.quadraticCurveTo(x,y+h,x,y+h-q); g.lineTo(x,y+q); g.quadraticCurveTo(x,y,x+q,y); };
+const rgba = (hex,a) => { const n=parseInt(hex.slice(1),16);
+  return `rgba(${n>>16&255},${n>>8&255},${n&255},${a})`; };
+const acc = (pod, hot) => pod.alive ? (hot ? C.alert : C.flow) : C.alert;
+
+/* ══════════════════════════════════════════════════
+   STYLES — each supplies pod anchors + a node renderer
+   ══════════════════════════════════════════════════ */
+const STYLES = {
+  twin: {
+    name:"TWIN", title:"겹친 카드 (Offset Stack)",
+    desc:"동일한 사각 카드 두 장을 대각선으로 살짝 어긋나게 겹칩니다. 디자인 툴에서 '인스턴스 2개'를 보여주는 방식 그대로라, 세로 공간을 거의 안 먹으면서 '똑같은 게 두 개'라는 게 즉시 읽힙니다.",
+    meta:"세로 점유 44px · 가장 컴팩트하면서 복제본 느낌이 강함",
+    orbit:0, branch:false,
+    anchor(n, lane){ return { x: n.x + (lane?9:-9), y: SY + (lane?9:-9) }; },
+    node(n, a){
+      const hot = n.queue.length > 5;
+      for (let i=PODS-1;i>=0;i--){
+        const pod = n.pods[i], p = pod.pos, s = 30, col = acc(pod,hot);
+        g.globalAlpha = a * (i===0 ? .82 : 1);
+        g.fillStyle = C.void; rr(p.x-s/2,p.y-s/2,s,s,7); g.fill();
+        g.lineWidth = 1.2;
+        g.strokeStyle = pod.alive ? rgba("#94A3B8",.34) : rgba(C.alert,.55);
+        if(!pod.alive) g.setLineDash([2,3]);
+        rr(p.x-s/2,p.y-s/2,s,s,7); g.stroke(); g.setLineDash([]);
+        if (pod.alive){
+          const w = 5, gap = 2, tot = n.cap*w + (n.cap-1)*gap;
+          for (let k=0;k<n.cap;k++){
+            g.fillStyle = k < pod.busy.length ? col : rgba("#94A3B8",.22);
+            rr(p.x-tot/2+k*(w+gap), p.y+4, w, 3, 1.5); g.fill();
+          }
+          const b = .5+.5*Math.sin(pod.beat/600 + lane_ph(i));
+          g.fillStyle = rgba(C.flow,.45+b*.45);
+          g.beginPath(); g.arc(p.x, p.y-5, 2+b*.9, 0, 6.2832); g.fill();
+        } else cross(p.x,p.y,a);
+        g.globalAlpha = 1;
+      }
+    }
+  },
+
+  pill: {
+    name:"CAPSULE", title:"갈라진 캡슐 (Split Pill)",
+    desc:"하나의 세로 캡슐이 가운데 이음매에서 위·아래 반쪽으로 갈라진 형태. 원래 한 덩어리였다는 게 실루엣에 남아 있어서 '이중화'라는 의미가 형태 자체로 전달됩니다. 반쪽마다 용량 게이지가 따로 찹니다.",
+    meta:"세로 점유 62px · 형태 하나로 '원래 하나 → 둘'을 말함",
+    orbit:0, branch:false,
+    anchor(n, lane){ return { x:n.x, y: SY + (lane?16:-16) }; },
+    node(n, a){
+      const hot = n.queue.length > 5;
+      g.globalAlpha = a;
+      n.pods.forEach((pod,i) => {
+        const p = pod.pos, w = 34, h = 28, col = acc(pod,hot);
+        const top = i===0;
+        g.fillStyle = C.void;
+        capsule(p.x-w/2, p.y-h/2, w, h, top?13:4, top?4:13); g.fill();
+        g.lineWidth = 1.2;
+        g.strokeStyle = pod.alive ? rgba("#94A3B8",.32) : rgba(C.alert,.55);
+        if(!pod.alive) g.setLineDash([2,3]);
+        capsule(p.x-w/2, p.y-h/2, w, h, top?13:4, top?4:13); g.stroke(); g.setLineDash([]);
+        if (pod.alive){
+          const bw = 3.4, gp = 2.6, tot = n.cap*bw + (n.cap-1)*gp;
+          for (let k=0;k<n.cap;k++){
+            g.fillStyle = k < pod.busy.length ? col : rgba("#94A3B8",.2);
+            rr(p.x-tot/2+k*(bw+gp), p.y-6, bw, 12, 1.7); g.fill();
+          }
+          const b = .5+.5*Math.sin(pod.beat/600 + lane_ph(i));
+          g.fillStyle = rgba(C.flow,.4+b*.5);
+          g.beginPath(); g.arc(p.x, p.y + (top?-10:10), 1.6+b*.7, 0, 6.2832); g.fill();
+        } else cross(p.x,p.y,1);
+      });
+      g.globalAlpha = 1;
+    }
+  },
+
+  orbit: {
+    name:"ORBIT", title:"역방향 반링 (Counter-Rotating Halves)",
+    desc:"링 하나를 반씩 끊어 서로 반대 방향으로 아주 천천히 돌립니다. 위치가 아니라 움직임으로 둘을 구분하는 방식이라 세로 공간을 전혀 안 씁니다. 한쪽이 죽으면 그 반링만 멈추고 붉게 굳습니다.",
+    meta:"세로 점유 38px · 기존 레이아웃 그대로 쓸 수 있는 유일한 안",
+    orbit:9, branch:false,
+    anchor(n){ return { x:n.x, y:SY }; },
+    node(n, a){
+      const hot = n.queue.length > 5;
+      g.globalAlpha = a;
+      n.pods.forEach((pod,i) => {
+        const R = 17, dir = i ? -1 : 1, spin = pod.alive ? (pod.beat/70)*dir : pod.frozen;
+        if (pod.alive) pod.frozen = spin;
+        const base = (i?90:-90) + spin;
+        const col = acc(pod,hot);
+        // capacity ticks along the half
+        const spanDeg = 156, per = spanDeg / n.cap;
+        g.lineWidth = 2.8; g.lineCap = "round";
+        for (let k=0;k<n.cap;k++){
+          const a0 = (base + k*per + 5) * Math.PI/180;
+          const a1 = (base + (k+1)*per - 5) * Math.PI/180;
+          g.strokeStyle = pod.alive ? (k < pod.busy.length ? col : rgba("#94A3B8",.24)) : rgba(C.alert,.4);
+          g.beginPath(); g.arc(n.x, SY, R, a0, a1); g.stroke();
+        }
+        g.lineCap = "butt";
+        // inner marker orbiting opposite ways
+        if (pod.alive){
+          const ang = (base + spanDeg/2) * Math.PI/180;
+          g.fillStyle = rgba(C.flow,.75);
+          g.beginPath(); g.arc(n.x+Math.cos(ang)*7.5, SY+Math.sin(ang)*7.5, 1.7, 0, 6.2832); g.fill();
+        }
+      });
+      if (n.pods.some(p=>!p.alive)) cross(n.x, SY, 1);
+      g.globalAlpha = 1;
+    }
+  },
+
+  lanes: {
+    name:"LANES", title:"이중 레인 바 (Dual Capacity Bars)",
+    desc:"원을 버리고 얇은 용량 바 두 줄로 갑니다. 슬롯이 몇 칸 차 있는지가 가장 정확하게 읽히고, 대시보드 다른 카드들과 시각 언어가 맞습니다. 화려함은 가장 덜하지만 운영 화면으로는 제일 정직합니다.",
+    meta:"세로 점유 26px · 정보 밀도 최고, 장식 최소",
+    orbit:0, branch:false,
+    anchor(n, lane){ return { x:n.x, y: SY + (lane?9:-9) }; },
+    node(n, a){
+      const hot = n.queue.length > 5;
+      g.globalAlpha = a;
+      n.pods.forEach((pod,i) => {
+        const p = pod.pos, col = acc(pod,hot);
+        const w = 8.5, gp = 2.4, tot = n.cap*w + (n.cap-1)*gp;
+        for (let k=0;k<n.cap;k++){
+          const x = p.x - tot/2 + k*(w+gp);
+          if (pod.alive){
+            g.fillStyle = k < pod.busy.length ? col : rgba("#94A3B8",.18);
+            rr(x, p.y-3.5, w, 7, 3.5); g.fill();
+          } else {
+            g.strokeStyle = rgba(C.alert,.45); g.lineWidth = 1;
+            g.setLineDash([2,2]); rr(x, p.y-3.5, w, 7, 3.5); g.stroke(); g.setLineDash([]);
+          }
+        }
+        g.font = `600 7.5px ${MONO}`; g.textAlign = "left";
+        g.fillStyle = pod.alive ? rgba("#7C8CA1",.75) : rgba(C.alert,.85);
+        g.fillText(pod.alive?`0${i+1}`:"DOWN", p.x+tot/2+6, p.y+2.6);
+        g.textAlign = "center";
+      });
+      g.globalAlpha = 1;
+    }
+  },
+
+  fork: {
+    name:"FORK", title:"세로 분기 (Vertical Fork) — 기존안",
+    desc:"스파인에서 위아래로 갈라져 파드 두 개로 들어갔다 다시 합쳐집니다. 트래픽이 어디로 갈라지는지가 선으로 보이는 유일한 안이고, 페일오버 순간이 가장 극적입니다. 대신 세로 공간을 가장 많이 씁니다.",
+    meta:"세로 점유 106px · 라우팅과 페일오버 설명력이 가장 큼",
+    orbit:6, branch:true,
+    anchor(n, lane){ return { x:n.x, y: SY + (lane?30:-30) }; },
+    node(n, a){
+      const hot = n.queue.length > 5;
+      g.globalAlpha = a;
+      n.pods.forEach((pod,i) => {
+        const p = pod.pos, R = 13, col = acc(pod,hot);
+        if (pod.alive){
+          const gd = n.cap>3?15:20, seg = 360/n.cap;
+          g.lineWidth = 2.6; g.lineCap = "round";
+          for (let k=0;k<n.cap;k++){
+            g.strokeStyle = k < pod.busy.length ? col : rgba("#94A3B8",.24);
+            g.beginPath();
+            g.arc(p.x,p.y,R,(-90+k*seg+gd/2)*Math.PI/180,(-90+(k+1)*seg-gd/2)*Math.PI/180);
+            g.stroke();
+          }
+          g.lineCap = "butt";
+          g.fillStyle = C.void; g.beginPath(); g.arc(p.x,p.y,R-3.6,0,6.2832); g.fill();
+          const b = .5+.5*Math.sin(pod.beat/600 + lane_ph(i));
+          g.fillStyle = rgba(C.flow,.5+b*.45);
+          g.beginPath(); g.arc(p.x,p.y,2.1+b*1.1,0,6.2832); g.fill();
+        } else {
+          g.setLineDash([2,3]); g.lineWidth=1.4; g.strokeStyle = rgba(C.alert,.6);
+          g.beginPath(); g.arc(p.x,p.y,R,0,6.2832); g.stroke(); g.setLineDash([]);
+          cross(p.x,p.y,1);
+        }
+        g.font = `600 8px ${MONO}`; g.textAlign="left";
+        g.fillStyle = pod.alive ? rgba("#7C8CA1",.8) : rgba(C.alert,.9);
+        g.fillText(`0${i+1}`, p.x+R+5, p.y+3);
+        g.textAlign="center";
+      });
+      g.globalAlpha = 1;
+    }
+  },
+};
+const ORDER = ["twin","pill","orbit","lanes","fork"];
+const lane_ph = i => i * Math.PI;
+
+function capsule(x,y,w,h,rTop,rBot){
+  g.beginPath();
+  g.moveTo(x+rTop,y); g.lineTo(x+w-rTop,y);
+  g.quadraticCurveTo(x+w,y,x+w,y+rTop);
+  g.lineTo(x+w,y+h-rBot); g.quadraticCurveTo(x+w,y+h,x+w-rBot,y+h);
+  g.lineTo(x+rBot,y+h); g.quadraticCurveTo(x,y+h,x,y+h-rBot);
+  g.lineTo(x,y+rTop); g.quadraticCurveTo(x,y,x+rTop,y);
+}
+function cross(x,y,a){
+  g.globalAlpha = a; g.strokeStyle = rgba(C.alert,.9); g.lineWidth = 1.3;
+  g.beginPath(); g.moveTo(x-3.6,y-3.6); g.lineTo(x+3.6,y+3.6);
+  g.moveTo(x+3.6,y-3.6); g.lineTo(x-3.6,y+3.6); g.stroke();
+}
+
+/* ══════════════════════════════════════════════════ */
+let W = 0, H = 0, SY = 0, inX = 0, outX = 0, nodes = [], parts = [];
+let cur = "twin", prev = null, blend = 1, hover = null;
+let closed = 1284, escal = 37, spawnAcc = 0, rate = 44, last = performance.now();
+
+function layoutNodes(){
+  const padL = Math.max(200, W*.175), padR = Math.max(200, W*.19);
+  const span = W - padL - padR;
+  SY = Math.round(H*.5);
+  inX = padL - Math.min(110, padL-80);
+  outX = W - padR + Math.min(52, padR-104);
+  nodes = STAGES.map((s,i) => {
+    const x = padL + span*(i+.5)/STAGES.length;
+    const pods = [];
+    for (let l=0;l<PODS;l++)
+      pods.push({ lane:l, alive:true, busy:[], beat:Math.random()*1000, frozen:0,
+                  pos:{x, y:SY}, ring:0 });
+    return { ...s, x, fork:x-HALF, merge:x+HALF, pods, queue:[], rr:0 };
+  });
+  parts = [];
+}
+function resize(){
+  const dpr = Math.min(devicePixelRatio||1, 2);
+  const r = cv.getBoundingClientRect();
+  if (!r.width) return;
+  W = r.width; H = r.height;
+  cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
+  g.setTransform(dpr,0,0,dpr,0,0);
+  layoutNodes();
+}
+
+/* ── simulation ── */
+function pick(n){
+  for (let k=0;k<PODS;k++){
+    const pod = n.pods[(n.rr+k)%PODS];
+    if (!pod.alive || pod.busy.length >= n.cap) continue;
+    n.rr = (n.rr+k+1)%PODS; return pod;
+  }
+  return null;
+}
+function sim(dt, now){
+  rate = 46 + 30*Math.sin(now/23000);
+  nodes[1].service = 1200 + 1300*(.5+.5*Math.sin(now/31000));
+  const per = 60000/Math.max(rate,1);
+  spawnAcc += dt;
+  while (spawnAcc > per){
+    spawnAcc -= per;
+    if (parts.length < 180)
+      parts.push({ seg:-1, t:Math.random()*.2, lane:(Math.random()-.5)*14,
+                   sev:.75+Math.random()*.5, state:"travel", failed:false,
+                   qi:0, pod:null, jit:Math.random()*6.28, px:null, py:null });
+  }
+
+  for (let i=parts.length-1;i>=0;i--){
+    const p = parts[i];
+    if (p.state === "travel"){
+      p.t += dt*.00054*(.9+p.sev*.2);
+      if (p.t >= 1){
+        const nx = p.seg+1;
+        if (nx >= nodes.length){ p.failed?escal++:closed++; parts.splice(i,1); continue; }
+        p.state="queued"; p.seg=nx; p.t=0; nodes[nx].queue.push(p);
+      }
+    } else if (p.state === "enter"){
+      p.t += dt*.0064;
+      if (p.t>=1){ p.state="service"; p.t=0; p.doneAt = now + nodes[p.seg].service*(.7+Math.random()*.6); }
+    } else if (p.state === "leave"){
+      p.t += dt*.0064;
+      if (p.t>=1){ p.state="travel"; p.t=0; p.lane=(Math.random()-.5)*14; }
+    }
+  }
+
+  for (const n of nodes){
+    let guard = 0;
+    while (n.queue.length && guard++ < 12){
+      const pod = pick(n); if (!pod) break;
+      const p = n.queue.shift();
+      p.state="enter"; p.t=0; p.pod=pod; pod.busy.push(p); pod.ring=1;
+    }
+    for (const pod of n.pods){
+      pod.beat += dt;
+      pod.ring = Math.max(0, pod.ring - dt*.0026);
+      for (let k=pod.busy.length-1;k>=0;k--){
+        const p = pod.busy[k];
+        if (p.state==="service" && now >= p.doneAt){
+          pod.busy.splice(k,1); p.state="leave"; p.t=0;
+          if (n.label==="TRIAGE" && Math.random()<.16) p.failed = true;
+        }
+      }
+    }
+    n.queue.forEach((p,i)=>p.qi=i);
+  }
+
+  // pod anchors follow the active style, morphing on switch
+  for (const n of nodes) for (const pod of n.pods){
+    const a = STYLES[cur].anchor(n, pod.lane);
+    if (prev && blend < 1){
+      const b = STYLES[prev].anchor(n, pod.lane);
+      pod.pos.x = lerp(b.x, a.x, blend); pod.pos.y = lerp(b.y, a.y, blend);
+    } else { pod.pos.x = a.x; pod.pos.y = a.y; }
+  }
+  if (blend < 1){ blend = cl(blend + dt/280); if (blend >= 1) prev = null; }
+}
+
+function posOf(p, now){
+  if (p.state === "queued"){
+    const n = nodes[p.seg], s = Math.min(p.qi, Q_MAX);
+    return { x:n.fork-6-s*Q_GAP, y:SY+Math.sin(p.jit)*1.6, q:true, deep:p.qi/Q_MAX };
+  }
+  if (p.state === "enter"){
+    const n = nodes[p.seg], e = ease(p.t), a = p.pod.pos;
+    return { x:cub(e,n.fork,n.fork+26,a.x-22,a.x), y:cub(e,SY,SY,a.y,a.y) };
+  }
+  if (p.state === "service"){
+    const a = p.pod.pos, R = STYLES[cur].orbit;
+    if (R < 1) return { x:a.x, y:a.y, svc:true, hide:true };
+    const ang = now*.0032 + p.jit;
+    return { x:a.x+Math.cos(ang)*R, y:a.y+Math.sin(ang)*R, svc:true };
+  }
+  if (p.state === "leave"){
+    const n = nodes[p.seg], e = ease(p.t), a = p.pod.pos;
+    return { x:cub(e,a.x,a.x+22,n.merge-26,n.merge), y:cub(e,a.y,a.y,SY,SY) };
+  }
+  const from = p.seg<0 ? inX : nodes[p.seg].merge;
+  const lastSeg = p.seg+1 >= nodes.length;
+  const to = lastSeg ? outX : nodes[p.seg+1].fork;
+  const e = ease(p.t);
+  let y = SY + p.lane*(1-e);
+  if (lastSeg) y = SY + (p.failed?1:-1)*e*e*FORK_DY;
+  const fi = p.seg<0 ? Math.min(p.t*3.5,1) : 1;
+  const fo = lastSeg ? 1-Math.max(0,(p.t-.76)*4.2) : 1;
+  return { x: from+(to-from)*e, y, a: fi*fo };
+}
+
+/* ── render ── */
+function drawBranches(n, alpha){
+  if (alpha <= .01) return;
+  g.globalAlpha = alpha; g.lineWidth = 1;
+  for (const pod of n.pods){
+    g.strokeStyle = pod.alive ? rgba(C.flow,.22) : rgba(C.alert,.14);
+    g.beginPath(); g.moveTo(n.fork, SY);
+    g.bezierCurveTo(n.fork+26, SY, n.x-24, pod.pos.y, n.x-15, pod.pos.y); g.stroke();
+    g.beginPath(); g.moveTo(n.x+15, pod.pos.y);
+    g.bezierCurveTo(n.x+24, pod.pos.y, n.merge-26, SY, n.merge, SY); g.stroke();
+  }
+  g.globalAlpha = 1;
+}
+
+function render(now){
+  g.fillStyle = "rgba(10,14,20,0.3)"; g.fillRect(0,0,W,H);
+
+  // spine
+  g.lineWidth = 1; g.strokeStyle = rgba(C.flow,.24);
+  for (let i=0;i<nodes.length;i++){
+    g.beginPath();
+    g.moveTo(i===0?inX:nodes[i-1].merge, SY);
+    g.lineTo(nodes[i].fork, SY); g.stroke();
+  }
+  // exit
+  const fx = nodes[nodes.length-1].merge, sx = fx + (outX-fx)*.28;
+  g.beginPath(); g.moveTo(fx,SY); g.lineTo(sx,SY); g.stroke();
+  [[-1,rgba(C.ok,.42)],[1,rgba(C.alert,.42)]].forEach(([d,col]) => {
+    g.strokeStyle = col; g.beginPath(); g.moveTo(sx,SY);
+    g.bezierCurveTo(sx+(outX-sx)*.5, SY, outX-22, SY+d*FORK_DY, outX, SY+d*FORK_DY);
+    g.stroke();
+  });
+  // ingest feeders
+  const feedX = inX-56;
+  [-1,0,1].forEach(d => {
+    g.strokeStyle = rgba(C.flow,.2); g.beginPath();
+    g.moveTo(feedX, SY+d*24);
+    g.bezierCurveTo(feedX+24, SY+d*24, inX-28, SY, inX, SY); g.stroke();
+  });
+
+  const cS = STYLES[cur], pS = prev ? STYLES[prev] : null;
+  for (const n of nodes){
+    drawBranches(n, (cS.branch?blend:0) + (pS && pS.branch ? 1-blend : 0));
+  }
+
+  // particles
+  for (const p of parts){
+    const pos = posOf(p, now);
+    if (pos.hide){ p.px = null; continue; }
+    const alpha = pos.a==null ? 1 : pos.a;
+    let col = "56,189,248";
+    if (p.failed) col = "244,63,94";
+    else if (pos.q && pos.deep > .55) col = "245,158,11";
+    if (p.px != null && !pos.q && !pos.svc){
+      g.strokeStyle = `rgba(${col},${.3*alpha})`; g.lineWidth = 1.1*p.sev;
+      g.beginPath(); g.moveTo(p.px,p.py); g.lineTo(pos.x,pos.y); g.stroke();
+    }
+    g.fillStyle = `rgba(${col},${.9*alpha})`;
+    g.beginPath(); g.arc(pos.x, pos.y, (pos.q?1.9:2.4)*p.sev, 0, 6.2832); g.fill();
+    p.px = pos.x; p.py = pos.y;
+  }
+
+  // nodes (crossfade during a style switch)
+  g.textAlign = "center";
+  for (const n of nodes){
+    if (hover && hover.n === n){
+      g.strokeStyle = rgba("#E2E8F0",.28); g.lineWidth = 1;
+      g.beginPath(); g.arc(hover.pod.pos.x, hover.pod.pos.y, 22, 0, 6.2832); g.stroke();
+    }
+    if (pS && blend < 1) pS.node(n, 1-blend);
+    cS.node(n, blend);
+  }
+
+  // stage labels
+  for (const n of nodes){
+    const up = n.pods.filter(p=>p.alive).length;
+    const busy = n.pods.reduce((a,p)=>a+p.busy.length,0);
+    const capNow = n.cap*up, hot = n.queue.length > 5;
+    const top = SY - nodeTop(n) - 14;
+    g.font = `600 11px ${MONO}`;
+    g.fillStyle = capNow===0 ? C.alert : hot ? C.alert : rgba("#E2E8F0",.92);
+    g.fillText(`${busy}/${capNow || n.cap*PODS}`, n.x, top);
+    g.font = `600 9px ${MONO}`;
+    const down = n.pods.findIndex(p=>!p.alive);
+    let lab = n.label, col = hot ? C.alert : rgba("#7C8CA1",1);
+    if (capNow===0){ lab = n.label+" · STALLED"; col = C.alert; }
+    else if (down>=0){ lab = n.label+" · POD-0"+(down+1)+" DOWN"; col = C.warn; }
+    g.fillStyle = col; g.fillText(lab, n.x, top-16);
+  }
+
+  // ingest / exit readouts
+  g.textAlign = "left";
+  g.font = `600 9px ${MONO}`; g.fillStyle = rgba("#7C8CA1",1);
+  g.fillText("ALERT INGEST", feedX, SY+44);
+  g.font = `600 17px ${MONO}`; g.fillStyle = rgba("#E2E8F0",.92);
+  g.fillText(String(Math.round(rate)), feedX, SY+64);
+  const rw = g.measureText(String(Math.round(rate))).width;
+  g.font = `600 9px ${MONO}`; g.fillStyle = rgba("#7C8CA1",1);
+  g.fillText("/MIN", feedX+rw+4, SY+64);
+
+  const ex = outX+12, cy = SY-FORK_DY, ey = SY+FORK_DY;
+  g.font = `600 9px ${MONO}`; g.fillStyle = rgba(C.ok,.95);
+  g.fillText("AUTO-CLOSED", ex, cy-18);
+  g.font = `600 17px ${MONO}`; g.fillStyle = C.ok;
+  g.fillText(closed.toLocaleString(), ex, cy+5);
+  g.font = `600 9px ${MONO}`; g.fillStyle = rgba(C.alert,.95);
+  g.fillText("ESCALATED", ex, ey-10);
+  g.font = `600 17px ${MONO}`; g.fillStyle = C.alert;
+  g.fillText(escal.toLocaleString(), ex, ey+14);
+  g.textAlign = "center";
+}
+function nodeTop(n){
+  const h = { twin:24, pill:30, orbit:19, lanes:14, fork:44 };
+  const a = h[cur], b = prev ? h[prev] : a;
+  return lerp(b, a, blend);
+}
+
+/* ── interaction ── */
+function hitTest(mx,my){
+  for (const n of nodes) for (const pod of n.pods)
+    if (Math.hypot(mx-pod.pos.x, my-pod.pos.y) <= 20) return { n, pod };
+  return null;
+}
+cv.addEventListener("pointermove", e => {
+  const r = cv.getBoundingClientRect();
+  hover = hitTest(e.clientX-r.left, e.clientY-r.top);
+  cv.style.cursor = hover ? "pointer" : "default";
+});
+cv.addEventListener("pointerleave", () => { hover = null; });
+cv.addEventListener("click", e => {
+  const r = cv.getBoundingClientRect();
+  const hit = hitTest(e.clientX-r.left, e.clientY-r.top);
+  if (!hit) return;
+  const { n, pod } = hit;
+  pod.alive = !pod.alive;
+  if (!pod.alive){
+    for (const p of pod.busy){ p.state="queued"; p.t=0; p.pod=null; n.queue.unshift(p); }
+    pod.busy.length = 0;
+  }
+});
+
+/* ── tabs ── */
+const tabs = document.getElementById("tabs");
+ORDER.forEach(key => {
+  const b = document.createElement("button");
+  b.textContent = STYLES[key].name;
+  b.setAttribute("role","tab");
+  b.setAttribute("aria-selected", key===cur);
+  b.addEventListener("click", () => {
+    if (key === cur) return;
+    prev = cur; cur = key; blend = 0;
+    [...tabs.children].forEach(c => c.setAttribute("aria-selected", c===b));
+    note();
+  });
+  tabs.appendChild(b);
+});
+const nt = document.getElementById("nt"), nd = document.getElementById("nd"),
+      nm = document.getElementById("nm"), st = document.getElementById("status");
+function note(){
+  const s = STYLES[cur];
+  nt.textContent = s.title; nd.textContent = s.desc; nm.textContent = s.meta;
+}
+function statusLine(){
+  let up = 0, tot = 0;
+  for (const n of nodes) for (const p of n.pods){ tot++; if (p.alive) up++; }
+  st.textContent = `${up===tot ? "● HEALTHY" : "◐ DEGRADED"} · ${up}/${tot} PODS · ${parts.length} IN FLIGHT`;
+  st.style.color = up===tot ? "" : C.warn;
+}
+
+/* ── loop ── */
+new ResizeObserver(resize).observe(cv);
+resize(); note();
+let uiTick = 0;
+function frame(now){
+  requestAnimationFrame(frame);
+  if (document.hidden){ last = now; return; }
+  const dt = Math.min(now-last, 60); last = now;
+  sim(dt, now); render(now);
+  if (now-uiTick > 400){ uiTick = now; statusLine(); }
+}
+if (reduce){ sim(16, performance.now()); render(performance.now()); statusLine(); }
+else requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
