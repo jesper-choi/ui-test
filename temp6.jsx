@@ -1,15 +1,15 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 
 /* ------------------------------------------------------------------
-   AI SOC — Pipeline Hero (v22 · Balanced Stage Visual Signatures)
+   AI SOC — Pipeline Hero (v23 · Apple Intelligence Ambient Sentinel)
 
-   · Uniform Capsule Design:
-     - Removed "POD 1" / "POD 2" text from Subagents for 100% unified design.
-     - All 8 pods across the pipeline now share the identical minimalist capsule aesthetic.
-   · Symmetrical & Highly Visible Stage Processing:
-     - ENRICHMENT: Streams active packets downward to SUBAGENTS.
-     - TRIAGE: Streams vivid Decision Probes forward to RESOLVED (Green) & ESCALATED (Red) outputs.
-     - ORCHESTRATOR: Master Admission Queue (4 per pod / 8 total).
+   · Master Ambient Sentinel (상단 0.1초 상태 판별 센티널):
+     - Multi-layer 3D glowing Ambient Orb with dynamic breathing frequency.
+     - 🟢 Optimal (All Clear): Emerald 3.5s smooth deep breath & "ALL SYSTEMS OPTIMAL".
+     - 🟠 Degraded (Warning): Amber 1.4s alert ripple & specific bottleneck breakdown.
+     - 🔴 Critical (Incident): Crimson 0.8s strobe pulse & actionable incident summary.
+     - Real-time interactive health simulator switcher to preview all conditions.
+   · Uniform Minimalist Pod Design & Precision Wire Physics.
 ------------------------------------------------------------------- */
 
 const C = {
@@ -20,6 +20,7 @@ const C = {
     flow: "#38BDF8",
     aiAura: "rgba(96, 165, 250, 0.25)",
     ok: "#34C759",
+    warn: "#FF9F0A",
     alert: "#FF453A",
     dim: "#86868B",
     text: "#F5F5F7",
@@ -109,6 +110,7 @@ export default function PipelineHero() {
     const stateRef = useRef(null);
 
     const [mode, setMode] = useState("sim");
+    const [healthStatus, setHealthStatus] = useState("optimal"); // 'optimal' | 'degraded' | 'critical'
     const [counts, setCounts] = useState({
         closed: 1284,
         escalated: 37,
@@ -118,10 +120,10 @@ export default function PipelineHero() {
         podsTotal: 8,
     });
 
-    const cfg = useRef({ mode });
+    const cfg = useRef({ mode, healthStatus });
     useEffect(() => {
-        cfg.current = { mode };
-    }, [mode]);
+        cfg.current = { mode, healthStatus };
+    }, [mode, healthStatus]);
 
     const reduced =
         typeof window !== "undefined" &&
@@ -150,7 +152,6 @@ export default function PipelineHero() {
             if (s.tools > 0) {
                 const subHeaderY = spineY + 82;
                 const subPodY = spineY + 122;
-                // Pure clean subagent pods without "POD 1" text clutter
                 const subPods = [
                     { id: "sub-p1", activeCount: 0, pos: { x: x - 46, y: subPodY }, w: SUB_POD_W, h: SUB_POD_H, beat: Math.random() * 1000 },
                     { id: "sub-p2", activeCount: 0, pos: { x: x + 46, y: subPodY }, w: SUB_POD_W, h: SUB_POD_H, beat: Math.random() * 1000 },
@@ -182,7 +183,7 @@ export default function PipelineHero() {
                 pods,
                 podChoiceIndex: 0,
                 sub,
-                probes: [], // Triage forward decision probes
+                probes: [],
             };
         });
 
@@ -292,7 +293,7 @@ export default function PipelineHero() {
             }
         }
 
-        // Subagents Synaptic Communication Engine (Enrichment Downward Flow)
+        // Subagents Synaptic Communication Engine (Enrichment)
         for (let i = 0; i < S.nodes.length; i++) {
             const n = S.nodes[i];
             if (!n.sub) continue;
@@ -331,7 +332,7 @@ export default function PipelineHero() {
             }
         }
 
-        // TRIAGE High-Visibility Decision Stream (Forward Flow to Resolved & Escalated)
+        // TRIAGE Forward Decision Stream
         const triageNode = S.nodes[2];
         if (triageNode) {
             const isTriaging = triageNode.pods[0].activeCount > 0 || triageNode.pods[1].activeCount > 0;
@@ -435,7 +436,6 @@ export default function PipelineHero() {
         const triageNode = nodes[2];
         const isTriaging = triageNode && (triageNode.pods[0].activeCount > 0 || triageNode.pods[1].activeCount > 0);
 
-        // Main Spine to Split Junction
         g.strokeStyle = isTriaging ? `rgba(96, 165, 250, ${0.5 * k})` : `rgba(56, 189, 248, ${0.18 * k})`;
         g.lineWidth = isTriaging ? 1.4 : 1.2;
         g.beginPath();
@@ -443,7 +443,6 @@ export default function PipelineHero() {
         g.lineTo(splitX, spineY);
         g.stroke();
 
-        // Exit Fork Curves with active decision energy glow
         const mkExit = (dir, col, isActiveRoute) => {
             const glowOpacity = isTriaging && isActiveRoute ? 0.8 : 0.45;
             g.strokeStyle = col.replace(/[\d\.]+\)$/, `${glowOpacity * k})`);
@@ -456,7 +455,7 @@ export default function PipelineHero() {
         mkExit(-1, "rgba(52, 199, 89, 0.45)", true);
         mkExit(1, "rgba(255, 69, 58, 0.45)", true);
 
-        // Highly-Visible TRIAGE Forward Decision Probes (Green/Red Decision Stream)
+        // Render TRIAGE Decision Probes
         if (triageNode && triageNode.probes) {
             for (let pIdx = 0; pIdx < triageNode.probes.length; pIdx++) {
                 const prb = triageNode.probes[pIdx];
@@ -466,12 +465,10 @@ export default function PipelineHero() {
 
                 let px, py;
                 if (prb.t < 0.35) {
-                    // 1. Travel from Triage Pod Exit to Split Junction
                     const u = prb.t / 0.35;
                     px = lerp(pod.right, splitX, u);
                     py = u < 0.35 ? lerp(pod.pos.y, spineY, smoothstep(u / 0.35)) : spineY;
                 } else {
-                    // 2. Travel along Upper (Resolved) or Lower (Escalated) Exit Curve
                     const u = (prb.t - 0.35) / 0.65;
                     const pt = evalCubic(
                         splitX, spineY,
@@ -484,14 +481,12 @@ export default function PipelineHero() {
                     py = pt.y;
                 }
 
-                // Vivid, Punchy Decision Photon
                 const rgb = isResolved ? "52, 199, 89" : "255, 69, 58";
                 g.fillStyle = `rgba(${rgb}, 0.98)`;
                 g.beginPath();
                 g.arc(px, py, 2.5, 0, Math.PI * 2);
                 g.fill();
 
-                // Luminous Decision Aura
                 g.fillStyle = `rgba(${rgb}, 0.35)`;
                 g.beginPath();
                 g.arc(px, py, 5.5, 0, Math.PI * 2);
@@ -542,7 +537,7 @@ export default function PipelineHero() {
                 }
             }
 
-            // 3. Subagent Pods (Clean Minimalist Capsule without "POD" text)
+            // 3. Subagent Pods (Clean Minimalist Capsule)
             for (let j = 0; j < 2; j++) {
                 const spod = sub.pods[j];
                 const px = spod.pos.x, py = spod.pos.y;
@@ -577,7 +572,6 @@ export default function PipelineHero() {
                     g.fill();
                 }
 
-                // Uniform Minimalist Counter (Consistent with all other pods)
                 g.font = `600 8.5px ${MONO}`;
                 g.textAlign = "right";
                 g.fillStyle = isBusy ? `rgba(245, 245, 247, ${0.95 * k})` : `rgba(161, 161, 166, ${0.6 * k})`;
@@ -609,7 +603,7 @@ export default function PipelineHero() {
                 g.fillText(worker.tag, worker.x, worker.y + (worker.isMore ? 2.5 : 3.2));
             }
 
-            // 5. 100% Precise Parametric Bezier Wire-Following Packets
+            // 5. Parametric Bezier Wire-Following Packets
             for (let pktIdx = 0; pktIdx < sub.packets.length; pktIdx++) {
                 const pkt = sub.packets[pktIdx];
                 const spod = sub.pods[pkt.subPodIdx];
@@ -625,8 +619,8 @@ export default function PipelineHero() {
                 } else {
                     const u = (pkt.t - 0.5) / 0.5;
                     pt = pkt.fromPod
-                        ? evalCubic(spod.pos.x, spod.pos.y + spod.h * 0.5, spod.pos.x, spod.pos.y + 28, worker.x, worker.y - 28, worker.x, worker.y - 12, u)
-                        : evalCubic(spod.pos.x, spod.pos.y + spod.h * 0.5, spod.pos.x, spod.pos.y + 28, worker.x, worker.y - 28, worker.x, worker.y - 12, 1 - u);
+                        ? evalCubic(spod.pos.x, spod.pos.y + spod.h * 0.5, spod.pos.x, spod.pos.y + 28, worker.x, worker.y - 12, u)
+                        : evalCubic(spod.pos.x, spod.pos.y + spod.h * 0.5, spod.pos.x, spod.pos.y + 28, worker.x, worker.y - 12, 1 - u);
                 }
 
                 g.fillStyle = pkt.fromPod ? "rgba(96, 165, 250, 0.95)" : "rgba(52, 199, 89, 0.95)";
@@ -655,29 +649,24 @@ export default function PipelineHero() {
             // Stage Dwelling Visuals
             if (pos.inAIStage) {
                 if (pos.stageKey === "triage" && pos.isDwellingInPod) {
-                    // TRIAGE: Vivid Dual-Tone Decision Beacon (Green/Red Evaluation Ring)
                     const polT = (now * 0.004) % (Math.PI * 2);
                     const sinG = Math.sin(polT);
 
-                    // Upper Green Decision Beacon
                     g.fillStyle = `rgba(52, 199, 89, ${0.4 + sinG * 0.2})`;
                     g.beginPath();
                     g.arc(pos.x + 4, pos.y - 4, 3.5, 0, Math.PI * 2);
                     g.fill();
 
-                    // Lower Red Decision Beacon
                     g.fillStyle = `rgba(255, 69, 58, ${0.4 - sinG * 0.2})`;
                     g.beginPath();
                     g.arc(pos.x + 4, pos.y + 4, 3.5, 0, Math.PI * 2);
                     g.fill();
 
-                    // Central Decision Core Halo
                     g.fillStyle = "rgba(96, 165, 250, 0.35)";
                     g.beginPath();
                     g.arc(pos.x, pos.y, 10, 0, Math.PI * 2);
                     g.fill();
                 } else {
-                    // ENRICHMENT: Soft AI Analysis Halo
                     g.fillStyle = "rgba(96, 165, 250, 0.22)";
                     g.beginPath();
                     g.arc(pos.x, pos.y, 9, 0, Math.PI * 2);
@@ -717,12 +706,10 @@ export default function PipelineHero() {
                 const px = pod.pos.x, py = pod.pos.y;
                 const isAnalyzing = isAIStage && pod.activeCount > 0;
 
-                // Pod Background
                 g.fillStyle = isAnalyzing ? "rgba(20, 28, 48, 0.9)" : C.surface;
                 rr(g, px - POD_W * 0.5, py - POD_H * 0.5, POD_W, POD_H, POD_R);
                 g.fill();
 
-                // Pod Hairline Border
                 g.lineWidth = 1;
                 g.strokeStyle = isAnalyzing
                     ? (isTriage ? "rgba(147, 197, 253, 0.65)" : "rgba(96, 165, 250, 0.55)")
@@ -730,13 +717,11 @@ export default function PipelineHero() {
                 rr(g, px - POD_W * 0.5, py - POD_H * 0.5, POD_W, POD_H, POD_R);
                 g.stroke();
 
-                // Indicator
                 const ix = px - POD_W * 0.5 + 9.5;
                 if (isAnalyzing) {
                     const breath = 0.5 + 0.5 * Math.sin(now * 0.0035 + j);
 
                     if (isTriage) {
-                        // TRIAGE: Active Decision Dual-Beacon (Green/Red split jewel)
                         g.fillStyle = `rgba(52, 199, 89, ${0.45 + breath * 0.35})`;
                         g.beginPath();
                         g.arc(ix - 1.5, py, 2.2, 0, Math.PI * 2);
@@ -747,7 +732,6 @@ export default function PipelineHero() {
                         g.arc(ix + 1.5, py, 2.2, 0, Math.PI * 2);
                         g.fill();
                     } else {
-                        // ENRICHMENT: Pure Cyan Breathing Halo
                         g.fillStyle = `rgba(96, 165, 250, ${0.18 + breath * 0.28})`;
                         g.beginPath();
                         g.arc(ix, py, 4.8, 0, Math.PI * 2);
@@ -902,38 +886,189 @@ export default function PipelineHero() {
         };
     }, [init, step, draw, reduced]);
 
+    // Metadata for current health state
+    const healthMeta = {
+        optimal: {
+            title: "ALL SYSTEMS OPTIMAL",
+            badge: "Operational",
+            color: C.ok,
+            bg: "rgba(52, 199, 89, 0.12)",
+            border: "rgba(52, 199, 89, 0.28)",
+            detail: "10/10 Services Healthy · Zero Blocked Queues · 91s Avg Latency",
+            subdetail: "100% Pipeline Throughput",
+        },
+        degraded: {
+            title: "DEGRADED PERFORMANCE",
+            badge: "Degraded State",
+            color: C.warn,
+            bg: "rgba(255, 159, 10, 0.14)",
+            border: "rgba(255, 159, 10, 0.35)",
+            detail: "1 Subagent Lagging (VirusTotal Latency +2.4s) · 9/10 Services Operational",
+            subdetail: "Auto-Failover Active",
+        },
+        critical: {
+            title: "CRITICAL ALERT · ACTION REQUIRED",
+            badge: "Critical Incident",
+            color: C.alert,
+            bg: "rgba(255, 69, 58, 0.16)",
+            border: "rgba(255, 69, 58, 0.4)",
+            detail: "FortiSOAR Integration Timeout · 3 Alert Ingestion Tasks Blocked",
+            subdetail: "Manual Override Required",
+        },
+    }[healthStatus];
+
     return (
         <div className="w-full p-4 sm:p-8 flex items-center justify-center min-h-[calc(100vh-60px)]" style={{ background: C.void, fontFamily: SANS }}>
+            {/* Embedded CSS for Apple Intelligence Sentinel Breathing Animation */}
+            <style>{`
+                @keyframes sentinel-breathe-optimal {
+                    0%, 100% { transform: scale(1); opacity: 0.35; filter: blur(12px); }
+                    50% { transform: scale(1.45); opacity: 0.75; filter: blur(18px); }
+                }
+                @keyframes sentinel-breathe-degraded {
+                    0%, 100% { transform: scale(1); opacity: 0.45; filter: blur(10px); }
+                    50% { transform: scale(1.6); opacity: 0.9; filter: blur(16px); }
+                }
+                @keyframes sentinel-breathe-critical {
+                    0%, 100% { transform: scale(1); opacity: 0.55; filter: blur(8px); }
+                    50% { transform: scale(1.8); opacity: 1; filter: blur(20px); }
+                }
+                @keyframes sentinel-spin-slow {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                @keyframes sentinel-core-pulse {
+                    0%, 100% { transform: scale(0.96); }
+                    50% { transform: scale(1.04); }
+                }
+            `}</style>
+
             <div className="w-full" style={{ maxWidth: 1260 }}>
-                <div className="relative overflow-hidden rounded-3xl border shadow-2xl" style={{ borderColor: C.glassBorder, background: C.cardBg }}>
-                    {/* Top Header */}
-                    <div className="flex flex-wrap items-center justify-between gap-4 px-8 pt-7 pb-5 border-b border-white/[0.04]">
-                        <div>
-                            <div style={{ fontFamily: SANS, fontSize: 10, fontWeight: 600, letterSpacing: "0.2em", color: C.dim }}>AI SOC PIPELINE</div>
-                            <div className="mt-1" style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.02em" }}>Operations Overview</div>
-                            <div className="mt-2.5 flex items-center gap-2.5" style={{ fontFamily: SANS, fontSize: 11.5, fontWeight: 500, color: C.textSecondary }}>
-                                {mode === "sim" ? (
-                                    <>
-                                        <span className="flex items-center gap-1.5 px-3 py-0.5 rounded-full" style={{
-                                            background: "rgba(52, 199, 89, 0.12)",
-                                            border: "1px solid rgba(52, 199, 89, 0.25)",
-                                            color: C.ok, fontSize: 10.5, fontWeight: 600,
-                                        }}>
-                                            <span className="w-1.5 h-1.5 rounded-full" style={{ background: C.ok }} />
-                                            Normal Operation
-                                        </span>
-                                        <span style={{ opacity: 0.3 }}>·</span>
-                                        <span>8/8 Pods Active</span>
-                                        <span style={{ opacity: 0.3 }}>·</span>
-                                        <span className="font-mono text-[11px]">{counts.inFlight}/{MAX_GLOBAL_IN_FLIGHT} in flight</span>
-                                    </>
-                                ) : (
-                                    <span style={{ opacity: 0.8 }}>○ Awaiting Stream</span>
-                                )}
+                <div
+                    className="relative overflow-hidden rounded-3xl border shadow-2xl transition-all duration-500"
+                    style={{
+                        borderColor: healthStatus === "optimal" ? C.glassBorder : healthMeta.border,
+                        background: C.cardBg,
+                        boxShadow: healthStatus === "critical"
+                            ? "0 0 50px rgba(255, 69, 58, 0.15), 0 25px 50px -12px rgba(0, 0, 0, 0.7)"
+                            : healthStatus === "degraded"
+                            ? "0 0 40px rgba(255, 159, 10, 0.12), 0 25px 50px -12px rgba(0, 0, 0, 0.7)"
+                            : "0 25px 50px -12px rgba(0, 0, 0, 0.7)",
+                    }}
+                >
+                    {/* Top Header: Apple Intelligence Ambient Sentinel */}
+                    <div className="flex flex-wrap items-center justify-between gap-6 px-8 pt-7 pb-6 border-b border-white/[0.05] bg-gradient-to-b from-white/[0.02] to-transparent">
+                        
+                        {/* Left: 3D Ambient Sentinel Orb + Master Status Header */}
+                        <div className="flex items-center gap-5">
+                            {/* Multi-layer 3D Ambient Sentinel Orb */}
+                            <div className="relative flex items-center justify-center w-14 h-14 select-none shrink-0">
+                                {/* Layer 1: Outer Soft Ambient Breathing Aura */}
+                                <div
+                                    className="absolute inset-0 rounded-full pointer-events-none"
+                                    style={{
+                                        background: `radial-gradient(circle, ${healthMeta.color} 0%, transparent 70%)`,
+                                        animation: healthStatus === "critical"
+                                            ? "sentinel-breathe-critical 0.8s ease-in-out infinite"
+                                            : healthStatus === "degraded"
+                                            ? "sentinel-breathe-degraded 1.4s ease-in-out infinite"
+                                            : "sentinel-breathe-optimal 3.5s ease-in-out infinite",
+                                    }}
+                                />
+
+                                {/* Layer 2: Middle Rotating Fluid Ring */}
+                                <div
+                                    className="absolute inset-1 rounded-full pointer-events-none opacity-80"
+                                    style={{
+                                        background: `conic-gradient(from 0deg, transparent, ${healthMeta.color}, transparent)`,
+                                        animation: "sentinel-spin-slow 8s linear infinite",
+                                        filter: "blur(4px)",
+                                    }}
+                                />
+
+                                {/* Layer 3: Glassy Jewel Core with Specular Light */}
+                                <div
+                                    className="relative w-8 h-8 rounded-full flex items-center justify-center shadow-lg transition-transform duration-300"
+                                    style={{
+                                        background: `radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.9) 0%, ${healthMeta.color} 55%, rgba(0, 0, 0, 0.7) 100%)`,
+                                        boxShadow: `0 0 16px ${healthMeta.color}, inset 0 1px 2px rgba(255, 255, 255, 0.8)`,
+                                        animation: healthStatus === "critical"
+                                            ? "sentinel-core-pulse 0.4s ease-in-out infinite"
+                                            : "sentinel-core-pulse 2.5s ease-in-out infinite",
+                                    }}
+                                >
+                                    {/* Inner Jewel Spark */}
+                                    <div className="w-2 h-2 rounded-full bg-white/90 shadow-sm" />
+                                </div>
+                            </div>
+
+                            {/* Status Title & Immediate Verdict Readout */}
+                            <div>
+                                <div className="flex items-center gap-2.5">
+                                    <span style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", color: C.dim }}>
+                                        AI SOC SENTINEL
+                                    </span>
+                                    <span
+                                        className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-sans transition-all duration-300"
+                                        style={{
+                                            background: healthMeta.bg,
+                                            border: `1px solid ${healthMeta.border}`,
+                                            color: healthMeta.color,
+                                            fontSize: 10,
+                                            fontWeight: 700,
+                                            letterSpacing: "0.02em",
+                                        }}
+                                    >
+                                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: healthMeta.color }} />
+                                        {healthMeta.badge}
+                                    </span>
+                                </div>
+
+                                <div className="mt-1 flex items-baseline gap-3">
+                                    <div style={{ fontSize: 24, fontWeight: 700, color: C.text, letterSpacing: "-0.02em" }}>
+                                        {healthMeta.title}
+                                    </div>
+                                </div>
+
+                                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12px] font-sans" style={{ color: C.textSecondary }}>
+                                    <span className="font-medium" style={{ color: healthStatus === "optimal" ? C.textSecondary : healthMeta.color }}>
+                                        {healthMeta.detail}
+                                    </span>
+                                    <span style={{ opacity: 0.3 }}>·</span>
+                                    <span className="font-mono text-[11px] text-[#86868B]">{counts.inFlight}/{MAX_GLOBAL_IN_FLIGHT} in flight</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div>
+                        {/* Right: State Simulator Switcher + Mode Control */}
+                        <div className="flex flex-wrap items-center gap-3">
+                            {/* Interactive Health Condition Simulator (Demo Control) */}
+                            <div className="flex p-1 rounded-full border" style={{ borderColor: C.glassBorder, background: "rgba(18, 24, 38, 0.7)" }}>
+                                {[
+                                    ["optimal", "🟢 Normal", C.ok],
+                                    ["degraded", "🟠 Degraded", C.warn],
+                                    ["critical", "🔴 Critical", C.alert],
+                                ].map(([id, label, color]) => {
+                                    const active = healthStatus === id;
+                                    return (
+                                        <button
+                                            key={id}
+                                            onClick={() => setHealthStatus(id)}
+                                            className="px-3.5 py-1 rounded-full text-[10.5px] font-semibold transition-all duration-200"
+                                            style={{
+                                                fontFamily: SANS,
+                                                background: active ? "rgba(255, 255, 255, 0.14)" : "transparent",
+                                                color: active ? C.text : C.dim,
+                                                boxShadow: active ? `0 2px 8px rgba(0, 0, 0, 0.4)` : "none",
+                                            }}
+                                        >
+                                            {label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Mode Segmented Control */}
                             <AppleSegmentedControl mode={mode} onChange={setMode} />
                         </div>
                     </div>
