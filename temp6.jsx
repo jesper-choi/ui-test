@@ -899,10 +899,8 @@ export default function PipelineHero() {
             badge: "Normal Health",
             color: "#34C759",
             colorSecondary: "#38BDF8",
-            bgBadge: "rgba(52, 199, 89, 0.12)",
             borderBadge: "rgba(52, 199, 89, 0.28)",
             heroGlow: "rgba(52, 199, 89, 0.08)",
-            detail: "10/10 Services Healthy",
             breakdown: [
                 { label: "Agents", ok: 3, total: 3, status: "ok" },
                 { label: "Subagents", ok: 3, total: 3, status: "ok" },
@@ -917,10 +915,8 @@ export default function PipelineHero() {
             badge: "Warning Health",
             color: "#FF9F0A",
             colorSecondary: "#FFD60A",
-            bgBadge: "rgba(255, 159, 10, 0.14)",
             borderBadge: "rgba(255, 159, 10, 0.35)",
             heroGlow: "rgba(255, 159, 10, 0.12)",
-            detail: "VirusTotal Latency (+2.4s)",
             breakdown: [
                 { label: "Agents", ok: 3, total: 3, status: "ok" },
                 { label: "Subagents", ok: 2, total: 3, status: "warn" },
@@ -935,10 +931,8 @@ export default function PipelineHero() {
             badge: "Critical Alert",
             color: "#FF453A",
             colorSecondary: "#FF375F",
-            bgBadge: "rgba(255, 69, 58, 0.16)",
             borderBadge: "rgba(255, 69, 58, 0.4)",
             heroGlow: "rgba(255, 69, 58, 0.18)",
-            detail: "FortiSOAR Integration Timeout",
             breakdown: [
                 { label: "Agents", ok: 2, total: 3, status: "warn" },
                 { label: "Subagents", ok: 3, total: 3, status: "ok" },
@@ -948,22 +942,49 @@ export default function PipelineHero() {
         },
     }[healthStatus];
 
+    // Animated vitality count-up + status-driven animation pace
+    const [displayVital, setDisplayVital] = useState(healthMeta.vitality);
+    const vitalRef = useRef(healthMeta.vitality);
+    useEffect(() => {
+        const set = (v) => { vitalRef.current = v; setDisplayVital(v); };
+        if (reduced) { set(healthMeta.vitality); return; }
+        const from = vitalRef.current;
+        const t0 = performance.now();
+        let raf;
+        const tick = (t) => {
+            const p = Math.min(1, (t - t0) / 700);
+            const eased = 1 - Math.pow(1 - p, 3);
+            set(Math.round(from + (healthMeta.vitality - from) * eased));
+            if (p < 1) raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+    }, [healthMeta.vitality, reduced]);
+
+    // Base beat (seconds) — faster as health degrades
+    const beat = { optimal: 5, degraded: 3, critical: 1.6 }[healthStatus];
+    const anim = (v) => (reduced ? "none" : v);
+
+
     return (
         <div className="w-full p-4 sm:p-8 flex items-center justify-center min-h-[calc(100vh-60px)]" style={{ background: C.void, fontFamily: SANS }}>
             {/* Apple VisionOS & Apple Intelligence Fluid Keyframe Animations */}
             <style>{`
-                @keyframes apple-fluid-aurora {
-                    0% { transform: rotate(0deg) scale(1); filter: blur(14px); opacity: 0.7; }
-                    50% { transform: rotate(180deg) scale(1.18); filter: blur(20px); opacity: 1; }
-                    100% { transform: rotate(360deg) scale(1); filter: blur(14px); opacity: 0.7; }
+                @keyframes vital-halo {
+                    0%, 100% { opacity: 0.35; transform: scale(0.92); }
+                    50% { opacity: 0.7; transform: scale(1.08); }
                 }
-                @keyframes apple-vital-breathe {
-                    0%, 100% { transform: scale(0.96); opacity: 0.85; }
-                    50% { transform: scale(1.04); opacity: 1; }
+                @keyframes vital-tracer {
+                    0%, 100% { opacity: 0.9; transform: scale(1); }
+                    50% { opacity: 0.35; transform: scale(1.6); }
                 }
-                @keyframes apple-ring-spin {
-                    from { transform: rotate(-90deg); }
-                    to { transform: rotate(270deg); }
+                @keyframes vital-orbit {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                @keyframes vital-sheen {
+                    0%, 100% { opacity: 0.15; }
+                    50% { opacity: 0.5; }
                 }
             `}</style>
 
@@ -978,170 +999,176 @@ export default function PipelineHero() {
                     }}
                 >
                     {/* Top Header:  Apple Intelligence System Health HUD */}
-                    <div className="flex flex-wrap items-center justify-between gap-6 px-8 pt-7 pb-6 border-b border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent">
-                        
-                        {/* Left: Chromatic Aurora Health Orb + Vitality Ring + Telemetry Header */}
+                    <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-6 px-8 pt-7 pb-6 border-b border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent">
+
+                        {/* Left: Vitality Ring + Type Stack */}
                         <div className="flex items-center gap-5">
-                            
-                            {/*  Multi-Layer Chromatic Aurora Health Orb with Vitality Gauge Ring */}
-                            <div className="relative flex items-center justify-center w-[60px] h-[60px] select-none shrink-0">
-                                
-                                {/* 1. Chromatic Fluid Aurora Halo (Apple Intelligence Fluid Mesh) */}
+
+                            {/* Vitality Ring — hairline vector, same language as the canvas below */}
+                            <div className="relative flex items-center justify-center w-[64px] h-[64px] select-none shrink-0">
+
+                                {/* Ambient breathing halo */}
                                 <div
-                                    className="absolute inset-0 rounded-full pointer-events-none"
+                                    className="absolute inset-[-8px] rounded-full pointer-events-none"
                                     style={{
-                                        background: `conic-gradient(from 0deg, ${healthMeta.color}, ${healthMeta.colorSecondary}, ${healthMeta.color})`,
-                                        animation: healthStatus === "critical"
-                                            ? "apple-fluid-aurora 2s linear infinite"
-                                            : healthStatus === "degraded"
-                                            ? "apple-fluid-aurora 4s linear infinite"
-                                            : "apple-fluid-aurora 8s linear infinite",
+                                        background: `radial-gradient(circle, ${healthMeta.color}3D 0%, ${healthMeta.color}0F 45%, transparent 70%)`,
+                                        animation: anim(`vital-halo ${beat}s ease-in-out infinite`),
                                     }}
                                 />
 
-                                {/* 2. Frosted Ambient Ring Backdrop */}
-                                <div className="absolute inset-[3px] rounded-full bg-[#080B10]/80 backdrop-blur-md shadow-inner" />
+                                <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 64 64">
+                                    <defs>
+                                        <linearGradient id={`vital-${healthStatus}`} x1="0" y1="0" x2="1" y2="1">
+                                            <stop offset="0%" stopColor={healthMeta.color} />
+                                            <stop offset="100%" stopColor={healthMeta.colorSecondary} />
+                                            {!reduced && (
+                                                <animateTransform
+                                                    attributeName="gradientTransform"
+                                                    type="rotate"
+                                                    from="0 0.5 0.5"
+                                                    to="360 0.5 0.5"
+                                                    dur={`${beat * 1.8}s`}
+                                                    repeatCount="indefinite"
+                                                />
+                                            )}
+                                        </linearGradient>
+                                    </defs>
 
-                                {/* 3. SVG 360° Circular Vitality Gauge (100% Score Ring) */}
-                                <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 60 60">
-                                    {/* Background Track */}
+                                    {/* Hairline track — matches the canvas edge weight */}
+                                    <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="3" />
+
+                                    {/* Vitality arc */}
                                     <circle
-                                        cx="30" cy="30" r="25"
+                                        cx="32" cy="32" r="26"
                                         fill="none"
-                                        stroke="rgba(255, 255, 255, 0.08)"
-                                        strokeWidth="2.5"
-                                    />
-                                    {/* Dynamic Health Stroke */}
-                                    <circle
-                                        cx="30" cy="30" r="25"
-                                        fill="none"
-                                        stroke={healthMeta.color}
-                                        strokeWidth="2.5"
-                                        strokeDasharray={2 * Math.PI * 25}
-                                        strokeDashoffset={(2 * Math.PI * 25) * (1 - healthMeta.vitality / 100)}
+                                        stroke={`url(#vital-${healthStatus})`}
+                                        strokeWidth="3"
                                         strokeLinecap="round"
-                                        className="transition-all duration-700"
-                                        style={{
-                                            filter: `drop-shadow(0 0 4px ${healthMeta.color})`,
-                                        }}
+                                        strokeDasharray={2 * Math.PI * 26}
+                                        strokeDashoffset={(2 * Math.PI * 26) * (1 - healthMeta.vitality / 100)}
+                                        transform="rotate(-90 32 32)"
+                                        className="transition-all duration-700 ease-out"
+                                        style={{ filter: `drop-shadow(0 0 4px ${healthMeta.color}80)` }}
                                     />
+
+                                    {/* Specular sheen sweeping the ring */}
+                                    <g style={{ animation: anim(`vital-orbit ${beat * 1.8}s linear infinite`), transformOrigin: "32px 32px" }}>
+                                        <circle
+                                            cx="32" cy="32" r="26"
+                                            fill="none"
+                                            stroke="#FFFFFF"
+                                            strokeWidth="3"
+                                            strokeLinecap="round"
+                                            strokeDasharray="8 155"
+                                            style={{ animation: anim(`vital-sheen ${beat * 0.9}s ease-in-out infinite`), opacity: 0.18 }}
+                                        />
+                                    </g>
+
+                                    {/* Arc endpoint — same dot vocabulary as the pipeline nodes */}
+                                    {(() => {
+                                        const a = (healthMeta.vitality / 100) * 2 * Math.PI - Math.PI / 2;
+                                        const x = 32 + 26 * Math.cos(a);
+                                        const y = 32 + 26 * Math.sin(a);
+                                        return (
+                                            <g className="transition-all duration-700 ease-out">
+                                                <circle
+                                                    cx={x} cy={y} r="2.8"
+                                                    fill={healthMeta.color}
+                                                    style={{
+                                                        animation: anim(`vital-tracer ${beat * 0.6}s ease-in-out infinite`),
+                                                        transformOrigin: `${x}px ${y}px`,
+                                                    }}
+                                                />
+                                                <circle cx={x} cy={y} r="1.7" fill="#FFFFFF" />
+                                            </g>
+                                        );
+                                    })()}
                                 </svg>
 
-                                {/* 4. 3D Glassy Specular Core with Health Score Number */}
-                                <div
-                                    className="relative w-[34px] h-[34px] rounded-full flex flex-col items-center justify-center shadow-lg transition-transform duration-300"
-                                    style={{
-                                        background: `radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.2) 25%, ${healthMeta.color} 70%, rgba(0, 0, 0, 0.8) 100%)`,
-                                        boxShadow: `0 0 14px ${healthMeta.color}, inset 0 1px 2px rgba(255, 255, 255, 0.9)`,
-                                        animation: healthStatus === "critical"
-                                            ? "apple-vital-breathe 0.6s ease-in-out infinite"
-                                            : "apple-vital-breathe 3s ease-in-out infinite",
-                                    }}
-                                >
-                                    <span className="font-mono text-[9px] font-extrabold tracking-tighter text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                                        {healthMeta.score}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* System Health Telemetry Breakdown */}
-                            <div>
-                                {/* Kicker + Status Pill */}
-                                <div className="flex items-center gap-2.5">
-                                    <span style={{ fontFamily: SANS, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.18em", color: C.dim }}>
-                                        SYSTEM HEALTH
-                                    </span>
+                                {/* Score readout */}
+                                <div className="relative flex items-baseline justify-center">
                                     <span
-                                        className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-sans transition-all duration-300 shadow-sm"
                                         style={{
-                                            background: healthMeta.bgBadge,
-                                            border: `1px solid ${healthMeta.borderBadge}`,
-                                            color: healthMeta.color,
-                                            fontSize: 10,
-                                            fontWeight: 700,
-                                            letterSpacing: "0.02em",
+                                            fontFamily: MONO,
+                                            fontSize: 15,
+                                            fontWeight: 600,
+                                            letterSpacing: "-0.04em",
+                                            color: C.text,
+                                            fontVariantNumeric: "tabular-nums",
                                         }}
                                     >
-                                        <span className="w-1.5 h-1.5 rounded-full" style={{ background: healthMeta.color }} />
-                                        {healthMeta.badge}
+                                        {displayVital}
+                                    </span>
+                                    <span style={{ fontFamily: MONO, fontSize: 8, fontWeight: 600, color: C.dim, marginLeft: 1 }}>%</span>
+                                </div>
+                            </div>
+
+                            {/* Type stack: mono kicker · display title · single telemetry line */}
+                            <div>
+                                <div
+                                    className="flex items-center gap-2"
+                                    style={{ fontFamily: MONO, fontSize: 9.5, fontWeight: 600, letterSpacing: "0.18em" }}
+                                >
+                                    <span style={{ color: C.dim }}>SYSTEM HEALTH</span>
+                                    <span style={{ color: "rgba(255,255,255,0.15)" }}>/</span>
+                                    <span className="flex items-center gap-1.5 transition-colors duration-500" style={{ color: healthMeta.color }}>
+                                        <span
+                                            className="w-1.5 h-1.5 rounded-full"
+                                            style={{ background: healthMeta.color, boxShadow: `0 0 6px ${healthMeta.color}` }}
+                                        />
+                                        {healthMeta.badge.toUpperCase()}
                                     </span>
                                 </div>
 
-                                {/* Main Title */}
-                                <div className="mt-1 flex items-baseline gap-3">
-                                    <div style={{ fontSize: 23, fontWeight: 700, color: C.text, letterSpacing: "-0.025em" }}>
-                                        {healthMeta.title}
-                                    </div>
+                                <div
+                                    className="mt-2 transition-colors duration-500"
+                                    style={{ fontFamily: SANS, fontSize: 25, fontWeight: 600, color: C.text, letterSpacing: "-0.026em", lineHeight: 1.1 }}
+                                >
+                                    {healthMeta.title}
                                 </div>
 
-                                {/*  Translucent Apple Telemetry Health Micro-Chips */}
-                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                {/* One calm telemetry row — mono numerals, hairline dividers */}
+                                <div
+                                    className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5"
+                                    style={{ fontFamily: MONO, fontSize: 10.5, letterSpacing: "0.04em" }}
+                                >
                                     {healthMeta.breakdown.map((item, idx) => {
-                                        const isOk = item.status === "ok";
-                                        const isWarn = item.status === "warn";
-                                        const dotCol = isOk ? C.ok : isWarn ? C.warn : C.alert;
+                                        const dotCol = item.status === "ok" ? C.ok : item.status === "warn" ? C.warn : C.alert;
                                         return (
-                                            <div
-                                                key={idx}
-                                                className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-[11px] font-medium transition-all"
-                                                style={{
-                                                    background: "rgba(255, 255, 255, 0.03)",
-                                                    borderColor: isOk ? "rgba(255, 255, 255, 0.08)" : dotCol,
-                                                    color: isOk ? C.textSecondary : dotCol,
-                                                }}
-                                            >
-                                                <span className="w-1.5 h-1.5 rounded-full" style={{ background: dotCol }} />
-                                                <span>{item.label}</span>
-                                                <span className="font-mono text-[10.5px] font-semibold text-white/90">
+                                            <span key={idx} className="flex items-center gap-1.5">
+                                                {idx > 0 && <span className="w-px h-2.5 mr-1.5" style={{ background: "rgba(255,255,255,0.10)" }} />}
+                                                <span className="w-1 h-1 rounded-full" style={{ background: dotCol }} />
+                                                <span style={{ color: C.textSecondary }}>{item.label.toUpperCase()}</span>
+                                                <span style={{ color: C.text, fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>
                                                     {item.ok}/{item.total}
                                                 </span>
-                                            </div>
+                                            </span>
                                         );
                                     })}
-
-                                    <span style={{ opacity: 0.25 }}>·</span>
-
-                                    {/* Live Telemetry Detail */}
-                                    <span className="text-[11.5px] font-medium text-[#86868B]">
-                                        {healthMeta.metrics}
-                                    </span>
+                                    <span className="w-px h-2.5" style={{ background: "rgba(255,255,255,0.10)" }} />
+                                    <span style={{ color: C.dim }}>{healthMeta.metrics}</span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Right: Health Simulator Controls + Mode Segmented Slider */}
-                        <div className="flex flex-wrap items-center gap-3">
-                            {/* Health Simulator:  Apple Segmented Control */}
-                            <div className="flex p-1 rounded-full border shadow-inner backdrop-blur-md" style={{ borderColor: C.glassBorder, background: "rgba(18, 24, 38, 0.7)" }}>
-                                {[
-                                    ["optimal", "🟢 100% Healthy"],
-                                    ["degraded", "🟠 88% Degraded"],
-                                    ["critical", "🔴 42% Critical"],
-                                ].map(([id, label]) => {
-                                    const active = healthStatus === id;
-                                    return (
-                                        <button
-                                            key={id}
-                                            onClick={() => setHealthStatus(id)}
-                                            className="px-3.5 py-1 rounded-full text-[10.5px] font-semibold transition-all duration-200"
-                                            style={{
-                                                fontFamily: SANS,
-                                                background: active ? "rgba(255, 255, 255, 0.15)" : "transparent",
-                                                color: active ? C.text : C.dim,
-                                                boxShadow: active ? "0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15)" : "none",
-                                            }}
-                                        >
-                                            {label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Mode Segmented Control */}
-                            <AppleSegmentedControl mode={mode} onChange={setMode} />
+                        {/* Right: two identical segmented controls */}
+                        <div className="flex flex-wrap items-center gap-2.5">
+                            <AppleSegmentedControl
+                                value={healthStatus}
+                                onChange={setHealthStatus}
+                                items={[
+                                    { id: "optimal", label: "Healthy", dot: C.ok },
+                                    { id: "degraded", label: "Degraded", dot: C.warn },
+                                    { id: "critical", label: "Critical", dot: C.alert },
+                                ]}
+                            />
+                            <AppleSegmentedControl
+                                value={mode}
+                                onChange={setMode}
+                                items={[{ id: "sim", label: "Simulation" }, { id: "real", label: "Production" }]}
+                            />
                         </div>
                     </div>
-
                     {/* Luxurious Spacious Canvas Stage Area */}
                     <div ref={wrapRef} className="relative w-full" style={{ height: 420 }}>
                         <canvas ref={canvasRef} className="block h-full w-full" />
@@ -1152,23 +1179,32 @@ export default function PipelineHero() {
     );
 }
 
-function AppleSegmentedControl({ mode, onChange }) {
+function AppleSegmentedControl({ value, onChange, items }) {
     return (
-        <div className="flex p-1 rounded-full border shadow-inner backdrop-blur-md" style={{ borderColor: C.glassBorder, background: "rgba(18, 24, 38, 0.6)", boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.04)" }}>
-            {[["sim", "Simulation"], ["real", "Production"]].map(([id, label]) => {
-                const active = mode === id;
+        <div
+            className="flex p-1 rounded-full border backdrop-blur-md"
+            style={{ borderColor: C.glassBorder, background: "rgba(18, 24, 38, 0.6)", boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.04)" }}
+        >
+            {items.map(({ id, label, dot }) => {
+                const active = value === id;
                 return (
                     <button
                         key={id}
                         onClick={() => onChange(id)}
-                        className="px-4 py-1.5 rounded-full text-[11px] font-medium transition-all duration-200"
+                        className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-medium transition-all duration-300"
                         style={{
                             fontFamily: SANS,
-                            background: active ? "rgba(255, 255, 255, 0.14)" : "transparent",
+                            background: active ? "rgba(255, 255, 255, 0.13)" : "transparent",
                             color: active ? C.text : C.dim,
-                            boxShadow: active ? "0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15)" : "none",
+                            boxShadow: active ? "0 1px 4px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.14)" : "none",
                         }}
                     >
+                        {dot && (
+                            <span
+                                className="w-1.5 h-1.5 rounded-full transition-all duration-300"
+                                style={{ background: dot, opacity: active ? 1 : 0.45, boxShadow: active ? `0 0 6px ${dot}` : "none" }}
+                            />
+                        )}
                         {label}
                     </button>
                 );
