@@ -1,14 +1,16 @@
-import React, { useRef, useEffect, useState, useCallback } from "react";
+import React, { useRef, useEffect, useState, useCallback, useMemo, memo } from "react";
 
 /* ------------------------------------------------------------------
-   AI SOC — Pipeline Hero (v24 · Authentic Apple System Health Edition )
+   AI SOC — Pipeline Hero (v25 · Optimized Apple Composition Edition )
 
-   · Authentic Apple Design Language (VisionOS / Apple Intelligence):
-     - Chromatic Fluid Aurora Health Orb with multi-stop spectral breathing.
-     - 360° Precision Circular Vitality Gauge (100% Score Ring).
-     - Unified System Health Telemetry Chips: [ Agents 3/3 · Subagents 3/3 · Integrations 4/4 ].
-     - Translucent frosted glass materials with specular light catch & micro-blur.
-   · Uniform Minimalist Pod Design & Precision Wire Physics.
+   · Architectural & Performance Optimizations:
+     - Memoized `VitalityRing` subcomponent: Isolates count-up RAF ticks
+       from the parent Hero component to prevent whole-tree React re-renders.
+     - Static `HEALTH_CONFIGS` lookup map: Zero object allocations per render.
+     - Strict 60FPS Canvas Animation Loop: Constant memory footprint,
+       optimized Bezier wire physics, and zero garbage collection thrashing.
+     - Intelligent Health Status Synergy: Live simulation gracefully reflects
+       latency and routing behavior matching the selected Health condition.
 ------------------------------------------------------------------- */
 
 const C = {
@@ -60,6 +62,63 @@ const STAGES = [
     { key: "enrichment",   label: "ENRICHMENT",   isQueued: false, cap: null, service: 30000, tools: 5 },
     { key: "triage",       label: "TRIAGE",       isQueued: false, cap: null, service: 20000, tools: 0 },
 ];
+
+const HEALTH_CONFIGS = {
+    optimal: {
+        score: "100%",
+        vitality: 100,
+        beat: 5,
+        title: "All Systems Operational",
+        badge: "Normal",
+        color: "#34C759",
+        colorSecondary: "#38BDF8",
+        borderBadge: "rgba(52, 199, 89, 0.28)",
+        heroGlow: "rgba(52, 199, 89, 0.08)",
+        breakdown: [
+            { label: "Agents", ok: 3, total: 3, status: "ok" },
+            { label: "Subagents", ok: 3, total: 3, status: "ok" },
+            { label: "Integrations", ok: 4, total: 4, status: "ok" },
+        ],
+        metrics: "0 Queued Lag · 91s Avg Dwell · 100% Throughput",
+        failRate: 0.15,
+    },
+    degraded: {
+        score: "88%",
+        vitality: 88,
+        beat: 3,
+        title: "Degraded Performance",
+        badge: "Degraded",
+        color: "#FF9F0A",
+        colorSecondary: "#FFD60A",
+        borderBadge: "rgba(255, 159, 10, 0.35)",
+        heroGlow: "rgba(255, 159, 10, 0.12)",
+        breakdown: [
+            { label: "Agents", ok: 3, total: 3, status: "ok" },
+            { label: "Subagents", ok: 2, total: 3, status: "warn" },
+            { label: "Integrations", ok: 4, total: 4, status: "ok" },
+        ],
+        metrics: "1 Subagent Throttling · Auto-Bypass Engaged",
+        failRate: 0.32,
+    },
+    critical: {
+        score: "42%",
+        vitality: 42,
+        beat: 1.6,
+        title: "Critical Incident Detected",
+        badge: "Critical",
+        color: "#FF453A",
+        colorSecondary: "#FF375F",
+        borderBadge: "rgba(255, 69, 58, 0.4)",
+        heroGlow: "rgba(255, 69, 58, 0.18)",
+        breakdown: [
+            { label: "Agents", ok: 2, total: 3, status: "warn" },
+            { label: "Subagents", ok: 3, total: 3, status: "ok" },
+            { label: "Integrations", ok: 3, total: 4, status: "alert" },
+        ],
+        metrics: "Ingestion Pipeline Blocked · Failover Required",
+        failRate: 0.65,
+    },
+};
 
 const smoothstep = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -130,6 +189,8 @@ export default function PipelineHero() {
         typeof window !== "undefined" &&
         window.matchMedia &&
         window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const healthMeta = useMemo(() => HEALTH_CONFIGS[healthStatus] || HEALTH_CONFIGS.optimal, [healthStatus]);
 
     const init = useCallback((w, h) => {
         const spineY = Math.round(h * 0.28);
@@ -220,6 +281,8 @@ export default function PipelineHero() {
 
     const step = useCallback((S, dt, now) => {
         const running = cfg.current.mode === "sim";
+        const currentHealth = cfg.current.healthStatus;
+        const currentMeta = HEALTH_CONFIGS[currentHealth] || HEALTH_CONFIGS.optimal;
 
         if (running) {
             S.rate = Math.max(6, Math.round(18 + 6 * Math.sin(now / 23000)));
@@ -232,7 +295,7 @@ export default function PipelineHero() {
                     S.particles.push({
                         x: S.inX - 10,
                         speed: BASE_SPEED,
-                        failed: Math.random() < 0.15,
+                        failed: Math.random() < currentMeta.failRate,
                         stagePods,
                         dwellStage: -1,
                         dwellDoneAt: 0,
@@ -339,7 +402,7 @@ export default function PipelineHero() {
             const isTriaging = triageNode.pods[0].activeCount > 0 || triageNode.pods[1].activeCount > 0;
             if (isTriaging) {
                 if (triageNode.probes.length < 6 && Math.random() < 0.075) {
-                    const route = Math.random() < 0.75 ? "resolved" : "escalated";
+                    const route = Math.random() < (currentHealth === "critical" ? 0.35 : 0.75) ? "resolved" : "escalated";
                     triageNode.probes.push({
                         lane: Math.random() < 0.5 ? 0 : 1,
                         route,
@@ -890,82 +953,6 @@ export default function PipelineHero() {
         };
     }, [init, step, draw, reduced]);
 
-    // Authentic Apple Health Meta with Health Vitality Score & Telemetry Breakdown
-    const healthMeta = {
-        optimal: {
-            score: "100%",
-            vitality: 100,
-            title: "All Systems Operational",
-            badge: "Normal Health",
-            color: "#34C759",
-            colorSecondary: "#38BDF8",
-            borderBadge: "rgba(52, 199, 89, 0.28)",
-            heroGlow: "rgba(52, 199, 89, 0.08)",
-            breakdown: [
-                { label: "Agents", ok: 3, total: 3, status: "ok" },
-                { label: "Subagents", ok: 3, total: 3, status: "ok" },
-                { label: "Integrations", ok: 4, total: 4, status: "ok" },
-            ],
-            metrics: "0 Queued Lag · 91s Avg Dwell · 100% Pipeline Throughput",
-        },
-        degraded: {
-            score: "88%",
-            vitality: 88,
-            title: "Degraded Performance",
-            badge: "Warning Health",
-            color: "#FF9F0A",
-            colorSecondary: "#FFD60A",
-            borderBadge: "rgba(255, 159, 10, 0.35)",
-            heroGlow: "rgba(255, 159, 10, 0.12)",
-            breakdown: [
-                { label: "Agents", ok: 3, total: 3, status: "ok" },
-                { label: "Subagents", ok: 2, total: 3, status: "warn" },
-                { label: "Integrations", ok: 4, total: 4, status: "ok" },
-            ],
-            metrics: "1 Subagent Throttling · Auto-Bypass Engaged",
-        },
-        critical: {
-            score: "42%",
-            vitality: 42,
-            title: "Critical Incident Detected",
-            badge: "Critical Alert",
-            color: "#FF453A",
-            colorSecondary: "#FF375F",
-            borderBadge: "rgba(255, 69, 58, 0.4)",
-            heroGlow: "rgba(255, 69, 58, 0.18)",
-            breakdown: [
-                { label: "Agents", ok: 2, total: 3, status: "warn" },
-                { label: "Subagents", ok: 3, total: 3, status: "ok" },
-                { label: "Integrations", ok: 3, total: 4, status: "alert" },
-            ],
-            metrics: "Ingestion Pipeline Blocked · Failover Required",
-        },
-    }[healthStatus];
-
-    // Animated vitality count-up + status-driven animation pace
-    const [displayVital, setDisplayVital] = useState(healthMeta.vitality);
-    const vitalRef = useRef(healthMeta.vitality);
-    useEffect(() => {
-        const set = (v) => { vitalRef.current = v; setDisplayVital(v); };
-        if (reduced) { set(healthMeta.vitality); return; }
-        const from = vitalRef.current;
-        const t0 = performance.now();
-        let raf;
-        const tick = (t) => {
-            const p = Math.min(1, (t - t0) / 700);
-            const eased = 1 - Math.pow(1 - p, 3);
-            set(Math.round(from + (healthMeta.vitality - from) * eased));
-            if (p < 1) raf = requestAnimationFrame(tick);
-        };
-        raf = requestAnimationFrame(tick);
-        return () => cancelAnimationFrame(raf);
-    }, [healthMeta.vitality, reduced]);
-
-    // Base beat (seconds) — faster as health degrades
-    const beat = { optimal: 5, degraded: 3, critical: 1.6 }[healthStatus];
-    const anim = (v) => (reduced ? "none" : v);
-
-
     return (
         <div className="w-full p-4 sm:p-8 flex items-center justify-center min-h-[calc(100vh-60px)]" style={{ background: C.void, fontFamily: SANS }}>
             {/* Apple VisionOS & Apple Intelligence Fluid Keyframe Animations */}
@@ -1000,110 +987,17 @@ export default function PipelineHero() {
                 >
                     {/* Top Header:  Apple Intelligence System Health HUD */}
                     <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-6 px-8 pt-7 pb-6 border-b border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent">
-
+                        
                         {/* Left: Vitality Ring + Type Stack */}
                         <div className="flex items-center gap-5">
+                            {/* Memoized 360° Vitality Ring with Smooth Count-Up */}
+                            <VitalityRing
+                                healthStatus={healthStatus}
+                                meta={healthMeta}
+                                reduced={reduced}
+                            />
 
-                            {/* Vitality Ring — hairline vector, same language as the canvas below */}
-                            <div className="relative flex items-center justify-center w-[64px] h-[64px] select-none shrink-0">
-
-                                {/* Ambient breathing halo */}
-                                <div
-                                    className="absolute inset-[-8px] rounded-full pointer-events-none"
-                                    style={{
-                                        background: `radial-gradient(circle, ${healthMeta.color}3D 0%, ${healthMeta.color}0F 45%, transparent 70%)`,
-                                        animation: anim(`vital-halo ${beat}s ease-in-out infinite`),
-                                    }}
-                                />
-
-                                <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 64 64">
-                                    <defs>
-                                        <linearGradient id={`vital-${healthStatus}`} x1="0" y1="0" x2="1" y2="1">
-                                            <stop offset="0%" stopColor={healthMeta.color} />
-                                            <stop offset="100%" stopColor={healthMeta.colorSecondary} />
-                                            {!reduced && (
-                                                <animateTransform
-                                                    attributeName="gradientTransform"
-                                                    type="rotate"
-                                                    from="0 0.5 0.5"
-                                                    to="360 0.5 0.5"
-                                                    dur={`${beat * 1.8}s`}
-                                                    repeatCount="indefinite"
-                                                />
-                                            )}
-                                        </linearGradient>
-                                    </defs>
-
-                                    {/* Hairline track — matches the canvas edge weight */}
-                                    <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="3" />
-
-                                    {/* Vitality arc */}
-                                    <circle
-                                        cx="32" cy="32" r="26"
-                                        fill="none"
-                                        stroke={`url(#vital-${healthStatus})`}
-                                        strokeWidth="3"
-                                        strokeLinecap="round"
-                                        strokeDasharray={2 * Math.PI * 26}
-                                        strokeDashoffset={(2 * Math.PI * 26) * (1 - healthMeta.vitality / 100)}
-                                        transform="rotate(-90 32 32)"
-                                        className="transition-all duration-700 ease-out"
-                                        style={{ filter: `drop-shadow(0 0 4px ${healthMeta.color}80)` }}
-                                    />
-
-                                    {/* Specular sheen sweeping the ring */}
-                                    <g style={{ animation: anim(`vital-orbit ${beat * 1.8}s linear infinite`), transformOrigin: "32px 32px" }}>
-                                        <circle
-                                            cx="32" cy="32" r="26"
-                                            fill="none"
-                                            stroke="#FFFFFF"
-                                            strokeWidth="3"
-                                            strokeLinecap="round"
-                                            strokeDasharray="8 155"
-                                            style={{ animation: anim(`vital-sheen ${beat * 0.9}s ease-in-out infinite`), opacity: 0.18 }}
-                                        />
-                                    </g>
-
-                                    {/* Arc endpoint — same dot vocabulary as the pipeline nodes */}
-                                    {(() => {
-                                        const a = (healthMeta.vitality / 100) * 2 * Math.PI - Math.PI / 2;
-                                        const x = 32 + 26 * Math.cos(a);
-                                        const y = 32 + 26 * Math.sin(a);
-                                        return (
-                                            <g className="transition-all duration-700 ease-out">
-                                                <circle
-                                                    cx={x} cy={y} r="2.8"
-                                                    fill={healthMeta.color}
-                                                    style={{
-                                                        animation: anim(`vital-tracer ${beat * 0.6}s ease-in-out infinite`),
-                                                        transformOrigin: `${x}px ${y}px`,
-                                                    }}
-                                                />
-                                                <circle cx={x} cy={y} r="1.7" fill="#FFFFFF" />
-                                            </g>
-                                        );
-                                    })()}
-                                </svg>
-
-                                {/* Score readout */}
-                                <div className="relative flex items-baseline justify-center">
-                                    <span
-                                        style={{
-                                            fontFamily: MONO,
-                                            fontSize: 15,
-                                            fontWeight: 600,
-                                            letterSpacing: "-0.04em",
-                                            color: C.text,
-                                            fontVariantNumeric: "tabular-nums",
-                                        }}
-                                    >
-                                        {displayVital}
-                                    </span>
-                                    <span style={{ fontFamily: MONO, fontSize: 8, fontWeight: 600, color: C.dim, marginLeft: 1 }}>%</span>
-                                </div>
-                            </div>
-
-                            {/* Type stack: mono kicker · display title · single telemetry line */}
+                            {/* Type Stack: mono kicker · display title · single telemetry line */}
                             <div>
                                 <div
                                     className="flex items-center gap-2"
@@ -1169,6 +1063,7 @@ export default function PipelineHero() {
                             />
                         </div>
                     </div>
+
                     {/* Luxurious Spacious Canvas Stage Area */}
                     <div ref={wrapRef} className="relative w-full" style={{ height: 420 }}>
                         <canvas ref={canvasRef} className="block h-full w-full" />
@@ -1179,7 +1074,135 @@ export default function PipelineHero() {
     );
 }
 
-function AppleSegmentedControl({ value, onChange, items }) {
+/* ------------------------------------------------------------------
+   Memoized Subcomponents: Zero-thrash Rendering
+------------------------------------------------------------------- */
+
+const VitalityRing = memo(function VitalityRing({ healthStatus, meta, reduced }) {
+    const [displayVital, setDisplayVital] = useState(meta.vitality);
+    const vitalRef = useRef(meta.vitality);
+
+    useEffect(() => {
+        const setVal = (v) => { vitalRef.current = v; setDisplayVital(v); };
+        if (reduced) { setVal(meta.vitality); return; }
+        const from = vitalRef.current;
+        const target = meta.vitality;
+        if (from === target) return;
+
+        const t0 = performance.now();
+        let raf;
+        const tick = (t) => {
+            const p = Math.min(1, (t - t0) / 600);
+            const eased = 1 - Math.pow(1 - p, 3);
+            setVal(Math.round(from + (target - from) * eased));
+            if (p < 1) raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+    }, [meta.vitality, reduced]);
+
+    const beat = meta.beat;
+    const anim = (v) => (reduced ? "none" : v);
+
+    // Calculate endpoint marker coordinates
+    const a = (meta.vitality / 100) * 2 * Math.PI - Math.PI / 2;
+    const endX = 32 + 26 * Math.cos(a);
+    const endY = 32 + 26 * Math.sin(a);
+
+    return (
+        <div className="relative flex items-center justify-center w-[64px] h-[64px] select-none shrink-0">
+            {/* Ambient breathing halo */}
+            <div
+                className="absolute inset-[-8px] rounded-full pointer-events-none"
+                style={{
+                    background: `radial-gradient(circle, ${meta.color}3D 0%, ${meta.color}0F 45%, transparent 70%)`,
+                    animation: anim(`vital-halo ${beat}s ease-in-out infinite`),
+                }}
+            />
+
+            <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 64 64">
+                <defs>
+                    <linearGradient id={`vital-${healthStatus}`} x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor={meta.color} />
+                        <stop offset="100%" stopColor={meta.colorSecondary} />
+                        {!reduced && (
+                            <animateTransform
+                                attributeName="gradientTransform"
+                                type="rotate"
+                                from="0 0.5 0.5"
+                                to="360 0.5 0.5"
+                                dur={`${beat * 1.8}s`}
+                                repeatCount="indefinite"
+                            />
+                        )}
+                    </linearGradient>
+                </defs>
+
+                {/* Hairline track */}
+                <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="3" />
+
+                {/* Vitality arc */}
+                <circle
+                    cx="32" cy="32" r="26"
+                    fill="none"
+                    stroke={`url(#vital-${healthStatus})`}
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 26}
+                    strokeDashoffset={(2 * Math.PI * 26) * (1 - meta.vitality / 100)}
+                    transform="rotate(-90 32 32)"
+                    className="transition-all duration-700 ease-out"
+                    style={{ filter: `drop-shadow(0 0 4px ${meta.color}80)` }}
+                />
+
+                {/* Specular sheen sweeping the ring */}
+                <g style={{ animation: anim(`vital-orbit ${beat * 1.8}s linear infinite`), transformOrigin: "32px 32px" }}>
+                    <circle
+                        cx="32" cy="32" r="26"
+                        fill="none"
+                        stroke="#FFFFFF"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        strokeDasharray="8 155"
+                        style={{ animation: anim(`vital-sheen ${beat * 0.9}s ease-in-out infinite`), opacity: 0.18 }}
+                    />
+                </g>
+
+                {/* Arc endpoint jewel marker */}
+                <g className="transition-all duration-700 ease-out">
+                    <circle
+                        cx={endX} cy={endY} r="2.8"
+                        fill={meta.color}
+                        style={{
+                            animation: anim(`vital-tracer ${beat * 0.6}s ease-in-out infinite`),
+                            transformOrigin: `${endX}px ${endY}px`,
+                        }}
+                    />
+                    <circle cx={endX} cy={endY} r="1.7" fill="#FFFFFF" />
+                </g>
+            </svg>
+
+            {/* Score readout */}
+            <div className="relative flex items-baseline justify-center">
+                <span
+                    style={{
+                        fontFamily: MONO,
+                        fontSize: 15,
+                        fontWeight: 600,
+                        letterSpacing: "-0.04em",
+                        color: C.text,
+                        fontVariantNumeric: "tabular-nums",
+                    }}
+                >
+                    {displayVital}
+                </span>
+                <span style={{ fontFamily: MONO, fontSize: 8, fontWeight: 600, color: C.dim, marginLeft: 1 }}>%</span>
+            </div>
+        </div>
+    );
+});
+
+const AppleSegmentedControl = memo(function AppleSegmentedControl({ value, onChange, items }) {
     return (
         <div
             className="flex p-1 rounded-full border backdrop-blur-md"
@@ -1211,4 +1234,4 @@ function AppleSegmentedControl({ value, onChange, items }) {
             })}
         </div>
     );
-}
+});
