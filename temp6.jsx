@@ -1,25 +1,26 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 
 /* ------------------------------------------------------------------
-   AI SOC — Pipeline Hero (v23 · Apple Intelligence Ambient Sentinel)
+   AI SOC — Pipeline Hero (v24 · Authentic Apple System Health Edition )
 
-   · Master Ambient Sentinel (상단 0.1초 상태 판별 센티널):
-     - Multi-layer 3D glowing Ambient Orb with dynamic breathing frequency.
-     - 🟢 Optimal (All Clear): Emerald 3.5s smooth deep breath & "ALL SYSTEMS OPTIMAL".
-     - 🟠 Degraded (Warning): Amber 1.4s alert ripple & specific bottleneck breakdown.
-     - 🔴 Critical (Incident): Crimson 0.8s strobe pulse & actionable incident summary.
-     - Real-time interactive health simulator switcher to preview all conditions.
+   · Authentic Apple Design Language (VisionOS / Apple Intelligence):
+     - Chromatic Fluid Aurora Health Orb with multi-stop spectral breathing.
+     - 360° Precision Circular Vitality Gauge (100% Score Ring).
+     - Unified System Health Telemetry Chips: [ Agents 3/3 · Subagents 3/3 · Integrations 4/4 ].
+     - Translucent frosted glass materials with specular light catch & micro-blur.
    · Uniform Minimalist Pod Design & Precision Wire Physics.
 ------------------------------------------------------------------- */
 
 const C = {
     void: "#080B10",
-    cardBg: "#0C1018",
+    cardBg: "rgba(12, 16, 24, 0.82)",
     surface: "rgba(18, 24, 38, 0.85)",
     glassBorder: "rgba(255, 255, 255, 0.08)",
     flow: "#38BDF8",
     aiAura: "rgba(96, 165, 250, 0.25)",
     ok: "#34C759",
+    mint: "#30D158",
+    cyan: "#38BDF8",
     warn: "#FF9F0A",
     alert: "#FF453A",
     dim: "#86868B",
@@ -706,10 +707,12 @@ export default function PipelineHero() {
                 const px = pod.pos.x, py = pod.pos.y;
                 const isAnalyzing = isAIStage && pod.activeCount > 0;
 
+                // Pod Background
                 g.fillStyle = isAnalyzing ? "rgba(20, 28, 48, 0.9)" : C.surface;
                 rr(g, px - POD_W * 0.5, py - POD_H * 0.5, POD_W, POD_H, POD_R);
                 g.fill();
 
+                // Pod Hairline Border
                 g.lineWidth = 1;
                 g.strokeStyle = isAnalyzing
                     ? (isTriage ? "rgba(147, 197, 253, 0.65)" : "rgba(96, 165, 250, 0.55)")
@@ -717,6 +720,7 @@ export default function PipelineHero() {
                 rr(g, px - POD_W * 0.5, py - POD_H * 0.5, POD_W, POD_H, POD_R);
                 g.stroke();
 
+                // Indicator
                 const ix = px - POD_W * 0.5 + 9.5;
                 if (isAnalyzing) {
                     const breath = 0.5 + 0.5 * Math.sin(now * 0.0035 + j);
@@ -886,133 +890,172 @@ export default function PipelineHero() {
         };
     }, [init, step, draw, reduced]);
 
-    // Metadata for current health state
+    // Authentic Apple Health Meta with Health Vitality Score & Telemetry Breakdown
     const healthMeta = {
         optimal: {
-            title: "ALL SYSTEMS OPTIMAL",
-            badge: "Operational",
-            color: C.ok,
-            bg: "rgba(52, 199, 89, 0.12)",
-            border: "rgba(52, 199, 89, 0.28)",
-            detail: "10/10 Services Healthy · Zero Blocked Queues · 91s Avg Latency",
-            subdetail: "100% Pipeline Throughput",
+            score: "100%",
+            vitality: 100,
+            title: "All Systems Operational",
+            badge: "Normal Health",
+            color: "#34C759",
+            colorSecondary: "#38BDF8",
+            bgBadge: "rgba(52, 199, 89, 0.12)",
+            borderBadge: "rgba(52, 199, 89, 0.28)",
+            heroGlow: "rgba(52, 199, 89, 0.08)",
+            detail: "10/10 Services Healthy",
+            breakdown: [
+                { label: "Agents", ok: 3, total: 3, status: "ok" },
+                { label: "Subagents", ok: 3, total: 3, status: "ok" },
+                { label: "Integrations", ok: 4, total: 4, status: "ok" },
+            ],
+            metrics: "0 Queued Lag · 91s Avg Dwell · 100% Pipeline Throughput",
         },
         degraded: {
-            title: "DEGRADED PERFORMANCE",
-            badge: "Degraded State",
-            color: C.warn,
-            bg: "rgba(255, 159, 10, 0.14)",
-            border: "rgba(255, 159, 10, 0.35)",
-            detail: "1 Subagent Lagging (VirusTotal Latency +2.4s) · 9/10 Services Operational",
-            subdetail: "Auto-Failover Active",
+            score: "88%",
+            vitality: 88,
+            title: "Degraded Performance",
+            badge: "Warning Health",
+            color: "#FF9F0A",
+            colorSecondary: "#FFD60A",
+            bgBadge: "rgba(255, 159, 10, 0.14)",
+            borderBadge: "rgba(255, 159, 10, 0.35)",
+            heroGlow: "rgba(255, 159, 10, 0.12)",
+            detail: "VirusTotal Latency (+2.4s)",
+            breakdown: [
+                { label: "Agents", ok: 3, total: 3, status: "ok" },
+                { label: "Subagents", ok: 2, total: 3, status: "warn" },
+                { label: "Integrations", ok: 4, total: 4, status: "ok" },
+            ],
+            metrics: "1 Subagent Throttling · Auto-Bypass Engaged",
         },
         critical: {
-            title: "CRITICAL ALERT · ACTION REQUIRED",
-            badge: "Critical Incident",
-            color: C.alert,
-            bg: "rgba(255, 69, 58, 0.16)",
-            border: "rgba(255, 69, 58, 0.4)",
-            detail: "FortiSOAR Integration Timeout · 3 Alert Ingestion Tasks Blocked",
-            subdetail: "Manual Override Required",
+            score: "42%",
+            vitality: 42,
+            title: "Critical Incident Detected",
+            badge: "Critical Alert",
+            color: "#FF453A",
+            colorSecondary: "#FF375F",
+            bgBadge: "rgba(255, 69, 58, 0.16)",
+            borderBadge: "rgba(255, 69, 58, 0.4)",
+            heroGlow: "rgba(255, 69, 58, 0.18)",
+            detail: "FortiSOAR Integration Timeout",
+            breakdown: [
+                { label: "Agents", ok: 2, total: 3, status: "warn" },
+                { label: "Subagents", ok: 3, total: 3, status: "ok" },
+                { label: "Integrations", ok: 3, total: 4, status: "alert" },
+            ],
+            metrics: "Ingestion Pipeline Blocked · Failover Required",
         },
     }[healthStatus];
 
     return (
         <div className="w-full p-4 sm:p-8 flex items-center justify-center min-h-[calc(100vh-60px)]" style={{ background: C.void, fontFamily: SANS }}>
-            {/* Embedded CSS for Apple Intelligence Sentinel Breathing Animation */}
+            {/* Apple VisionOS & Apple Intelligence Fluid Keyframe Animations */}
             <style>{`
-                @keyframes sentinel-breathe-optimal {
-                    0%, 100% { transform: scale(1); opacity: 0.35; filter: blur(12px); }
-                    50% { transform: scale(1.45); opacity: 0.75; filter: blur(18px); }
+                @keyframes apple-fluid-aurora {
+                    0% { transform: rotate(0deg) scale(1); filter: blur(14px); opacity: 0.7; }
+                    50% { transform: rotate(180deg) scale(1.18); filter: blur(20px); opacity: 1; }
+                    100% { transform: rotate(360deg) scale(1); filter: blur(14px); opacity: 0.7; }
                 }
-                @keyframes sentinel-breathe-degraded {
-                    0%, 100% { transform: scale(1); opacity: 0.45; filter: blur(10px); }
-                    50% { transform: scale(1.6); opacity: 0.9; filter: blur(16px); }
+                @keyframes apple-vital-breathe {
+                    0%, 100% { transform: scale(0.96); opacity: 0.85; }
+                    50% { transform: scale(1.04); opacity: 1; }
                 }
-                @keyframes sentinel-breathe-critical {
-                    0%, 100% { transform: scale(1); opacity: 0.55; filter: blur(8px); }
-                    50% { transform: scale(1.8); opacity: 1; filter: blur(20px); }
-                }
-                @keyframes sentinel-spin-slow {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-                @keyframes sentinel-core-pulse {
-                    0%, 100% { transform: scale(0.96); }
-                    50% { transform: scale(1.04); }
+                @keyframes apple-ring-spin {
+                    from { transform: rotate(-90deg); }
+                    to { transform: rotate(270deg); }
                 }
             `}</style>
 
             <div className="w-full" style={{ maxWidth: 1260 }}>
+                {/* Frosted Glass Apple Hero Container with Specular Highlights */}
                 <div
-                    className="relative overflow-hidden rounded-3xl border shadow-2xl transition-all duration-500"
+                    className="relative overflow-hidden rounded-3xl border transition-all duration-700 backdrop-blur-2xl"
                     style={{
-                        borderColor: healthStatus === "optimal" ? C.glassBorder : healthMeta.border,
+                        borderColor: healthStatus === "optimal" ? "rgba(255, 255, 255, 0.09)" : healthMeta.borderBadge,
                         background: C.cardBg,
-                        boxShadow: healthStatus === "critical"
-                            ? "0 0 50px rgba(255, 69, 58, 0.15), 0 25px 50px -12px rgba(0, 0, 0, 0.7)"
-                            : healthStatus === "degraded"
-                            ? "0 0 40px rgba(255, 159, 10, 0.12), 0 25px 50px -12px rgba(0, 0, 0, 0.7)"
-                            : "0 25px 50px -12px rgba(0, 0, 0, 0.7)",
+                        boxShadow: `0 30px 60px -12px rgba(0, 0, 0, 0.8), 0 0 45px ${healthMeta.heroGlow}, inset 0 1px 0 rgba(255, 255, 255, 0.12)`,
                     }}
                 >
-                    {/* Top Header: Apple Intelligence Ambient Sentinel */}
-                    <div className="flex flex-wrap items-center justify-between gap-6 px-8 pt-7 pb-6 border-b border-white/[0.05] bg-gradient-to-b from-white/[0.02] to-transparent">
+                    {/* Top Header:  Apple Intelligence System Health HUD */}
+                    <div className="flex flex-wrap items-center justify-between gap-6 px-8 pt-7 pb-6 border-b border-white/[0.06] bg-gradient-to-b from-white/[0.03] to-transparent">
                         
-                        {/* Left: 3D Ambient Sentinel Orb + Master Status Header */}
+                        {/* Left: Chromatic Aurora Health Orb + Vitality Ring + Telemetry Header */}
                         <div className="flex items-center gap-5">
-                            {/* Multi-layer 3D Ambient Sentinel Orb */}
-                            <div className="relative flex items-center justify-center w-14 h-14 select-none shrink-0">
-                                {/* Layer 1: Outer Soft Ambient Breathing Aura */}
+                            
+                            {/*  Multi-Layer Chromatic Aurora Health Orb with Vitality Gauge Ring */}
+                            <div className="relative flex items-center justify-center w-[60px] h-[60px] select-none shrink-0">
+                                
+                                {/* 1. Chromatic Fluid Aurora Halo (Apple Intelligence Fluid Mesh) */}
                                 <div
                                     className="absolute inset-0 rounded-full pointer-events-none"
                                     style={{
-                                        background: `radial-gradient(circle, ${healthMeta.color} 0%, transparent 70%)`,
+                                        background: `conic-gradient(from 0deg, ${healthMeta.color}, ${healthMeta.colorSecondary}, ${healthMeta.color})`,
                                         animation: healthStatus === "critical"
-                                            ? "sentinel-breathe-critical 0.8s ease-in-out infinite"
+                                            ? "apple-fluid-aurora 2s linear infinite"
                                             : healthStatus === "degraded"
-                                            ? "sentinel-breathe-degraded 1.4s ease-in-out infinite"
-                                            : "sentinel-breathe-optimal 3.5s ease-in-out infinite",
+                                            ? "apple-fluid-aurora 4s linear infinite"
+                                            : "apple-fluid-aurora 8s linear infinite",
                                     }}
                                 />
 
-                                {/* Layer 2: Middle Rotating Fluid Ring */}
-                                <div
-                                    className="absolute inset-1 rounded-full pointer-events-none opacity-80"
-                                    style={{
-                                        background: `conic-gradient(from 0deg, transparent, ${healthMeta.color}, transparent)`,
-                                        animation: "sentinel-spin-slow 8s linear infinite",
-                                        filter: "blur(4px)",
-                                    }}
-                                />
+                                {/* 2. Frosted Ambient Ring Backdrop */}
+                                <div className="absolute inset-[3px] rounded-full bg-[#080B10]/80 backdrop-blur-md shadow-inner" />
 
-                                {/* Layer 3: Glassy Jewel Core with Specular Light */}
+                                {/* 3. SVG 360° Circular Vitality Gauge (100% Score Ring) */}
+                                <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 60 60">
+                                    {/* Background Track */}
+                                    <circle
+                                        cx="30" cy="30" r="25"
+                                        fill="none"
+                                        stroke="rgba(255, 255, 255, 0.08)"
+                                        strokeWidth="2.5"
+                                    />
+                                    {/* Dynamic Health Stroke */}
+                                    <circle
+                                        cx="30" cy="30" r="25"
+                                        fill="none"
+                                        stroke={healthMeta.color}
+                                        strokeWidth="2.5"
+                                        strokeDasharray={2 * Math.PI * 25}
+                                        strokeDashoffset={(2 * Math.PI * 25) * (1 - healthMeta.vitality / 100)}
+                                        strokeLinecap="round"
+                                        className="transition-all duration-700"
+                                        style={{
+                                            filter: `drop-shadow(0 0 4px ${healthMeta.color})`,
+                                        }}
+                                    />
+                                </svg>
+
+                                {/* 4. 3D Glassy Specular Core with Health Score Number */}
                                 <div
-                                    className="relative w-8 h-8 rounded-full flex items-center justify-center shadow-lg transition-transform duration-300"
+                                    className="relative w-[34px] h-[34px] rounded-full flex flex-col items-center justify-center shadow-lg transition-transform duration-300"
                                     style={{
-                                        background: `radial-gradient(circle at 35% 35%, rgba(255, 255, 255, 0.9) 0%, ${healthMeta.color} 55%, rgba(0, 0, 0, 0.7) 100%)`,
-                                        boxShadow: `0 0 16px ${healthMeta.color}, inset 0 1px 2px rgba(255, 255, 255, 0.8)`,
+                                        background: `radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.2) 25%, ${healthMeta.color} 70%, rgba(0, 0, 0, 0.8) 100%)`,
+                                        boxShadow: `0 0 14px ${healthMeta.color}, inset 0 1px 2px rgba(255, 255, 255, 0.9)`,
                                         animation: healthStatus === "critical"
-                                            ? "sentinel-core-pulse 0.4s ease-in-out infinite"
-                                            : "sentinel-core-pulse 2.5s ease-in-out infinite",
+                                            ? "apple-vital-breathe 0.6s ease-in-out infinite"
+                                            : "apple-vital-breathe 3s ease-in-out infinite",
                                     }}
                                 >
-                                    {/* Inner Jewel Spark */}
-                                    <div className="w-2 h-2 rounded-full bg-white/90 shadow-sm" />
+                                    <span className="font-mono text-[9px] font-extrabold tracking-tighter text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                                        {healthMeta.score}
+                                    </span>
                                 </div>
                             </div>
 
-                            {/* Status Title & Immediate Verdict Readout */}
+                            {/* System Health Telemetry Breakdown */}
                             <div>
+                                {/* Kicker + Status Pill */}
                                 <div className="flex items-center gap-2.5">
-                                    <span style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: "0.2em", color: C.dim }}>
-                                        AI SOC SENTINEL
+                                    <span style={{ fontFamily: SANS, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.18em", color: C.dim }}>
+                                        SYSTEM HEALTH
                                     </span>
                                     <span
-                                        className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-sans transition-all duration-300"
+                                        className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-sans transition-all duration-300 shadow-sm"
                                         style={{
-                                            background: healthMeta.bg,
-                                            border: `1px solid ${healthMeta.border}`,
+                                            background: healthMeta.bgBadge,
+                                            border: `1px solid ${healthMeta.borderBadge}`,
                                             color: healthMeta.color,
                                             fontSize: 10,
                                             fontWeight: 700,
@@ -1024,31 +1067,57 @@ export default function PipelineHero() {
                                     </span>
                                 </div>
 
+                                {/* Main Title */}
                                 <div className="mt-1 flex items-baseline gap-3">
-                                    <div style={{ fontSize: 24, fontWeight: 700, color: C.text, letterSpacing: "-0.02em" }}>
+                                    <div style={{ fontSize: 23, fontWeight: 700, color: C.text, letterSpacing: "-0.025em" }}>
                                         {healthMeta.title}
                                     </div>
                                 </div>
 
-                                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12px] font-sans" style={{ color: C.textSecondary }}>
-                                    <span className="font-medium" style={{ color: healthStatus === "optimal" ? C.textSecondary : healthMeta.color }}>
-                                        {healthMeta.detail}
+                                {/*  Translucent Apple Telemetry Health Micro-Chips */}
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                    {healthMeta.breakdown.map((item, idx) => {
+                                        const isOk = item.status === "ok";
+                                        const isWarn = item.status === "warn";
+                                        const dotCol = isOk ? C.ok : isWarn ? C.warn : C.alert;
+                                        return (
+                                            <div
+                                                key={idx}
+                                                className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-[11px] font-medium transition-all"
+                                                style={{
+                                                    background: "rgba(255, 255, 255, 0.03)",
+                                                    borderColor: isOk ? "rgba(255, 255, 255, 0.08)" : dotCol,
+                                                    color: isOk ? C.textSecondary : dotCol,
+                                                }}
+                                            >
+                                                <span className="w-1.5 h-1.5 rounded-full" style={{ background: dotCol }} />
+                                                <span>{item.label}</span>
+                                                <span className="font-mono text-[10.5px] font-semibold text-white/90">
+                                                    {item.ok}/{item.total}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+
+                                    <span style={{ opacity: 0.25 }}>·</span>
+
+                                    {/* Live Telemetry Detail */}
+                                    <span className="text-[11.5px] font-medium text-[#86868B]">
+                                        {healthMeta.metrics}
                                     </span>
-                                    <span style={{ opacity: 0.3 }}>·</span>
-                                    <span className="font-mono text-[11px] text-[#86868B]">{counts.inFlight}/{MAX_GLOBAL_IN_FLIGHT} in flight</span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Right: State Simulator Switcher + Mode Control */}
+                        {/* Right: Health Simulator Controls + Mode Segmented Slider */}
                         <div className="flex flex-wrap items-center gap-3">
-                            {/* Interactive Health Condition Simulator (Demo Control) */}
-                            <div className="flex p-1 rounded-full border" style={{ borderColor: C.glassBorder, background: "rgba(18, 24, 38, 0.7)" }}>
+                            {/* Health Simulator:  Apple Segmented Control */}
+                            <div className="flex p-1 rounded-full border shadow-inner backdrop-blur-md" style={{ borderColor: C.glassBorder, background: "rgba(18, 24, 38, 0.7)" }}>
                                 {[
-                                    ["optimal", "🟢 Normal", C.ok],
-                                    ["degraded", "🟠 Degraded", C.warn],
-                                    ["critical", "🔴 Critical", C.alert],
-                                ].map(([id, label, color]) => {
+                                    ["optimal", "🟢 100% Healthy"],
+                                    ["degraded", "🟠 88% Degraded"],
+                                    ["critical", "🔴 42% Critical"],
+                                ].map(([id, label]) => {
                                     const active = healthStatus === id;
                                     return (
                                         <button
@@ -1057,9 +1126,9 @@ export default function PipelineHero() {
                                             className="px-3.5 py-1 rounded-full text-[10.5px] font-semibold transition-all duration-200"
                                             style={{
                                                 fontFamily: SANS,
-                                                background: active ? "rgba(255, 255, 255, 0.14)" : "transparent",
+                                                background: active ? "rgba(255, 255, 255, 0.15)" : "transparent",
                                                 color: active ? C.text : C.dim,
-                                                boxShadow: active ? `0 2px 8px rgba(0, 0, 0, 0.4)` : "none",
+                                                boxShadow: active ? "0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15)" : "none",
                                             }}
                                         >
                                             {label}
@@ -1085,19 +1154,19 @@ export default function PipelineHero() {
 
 function AppleSegmentedControl({ mode, onChange }) {
     return (
-        <div className="flex p-1 rounded-full border" style={{ borderColor: C.glassBorder, background: "rgba(18, 24, 38, 0.6)", boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.04)" }}>
+        <div className="flex p-1 rounded-full border shadow-inner backdrop-blur-md" style={{ borderColor: C.glassBorder, background: "rgba(18, 24, 38, 0.6)", boxShadow: "inset 0 1px 0 rgba(255, 255, 255, 0.04)" }}>
             {[["sim", "Simulation"], ["real", "Production"]].map(([id, label]) => {
                 const active = mode === id;
                 return (
                     <button
                         key={id}
                         onClick={() => onChange(id)}
-                        className="px-4 py-1.5 rounded-full text-[11.5px] font-medium transition-all duration-200"
+                        className="px-4 py-1.5 rounded-full text-[11px] font-medium transition-all duration-200"
                         style={{
                             fontFamily: SANS,
-                            background: active ? "rgba(255, 255, 255, 0.12)" : "transparent",
+                            background: active ? "rgba(255, 255, 255, 0.14)" : "transparent",
                             color: active ? C.text : C.dim,
-                            boxShadow: active ? "0 2px 8px rgba(0, 0, 0, 0.3)" : "none",
+                            boxShadow: active ? "0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15)" : "none",
                         }}
                     >
                         {label}
